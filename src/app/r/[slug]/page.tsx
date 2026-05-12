@@ -107,6 +107,15 @@ function isSlotPassed(date: string, slot: TimeSlot) {
   return new Date(`${date}T${slot.endTime}:00`).getTime() <= Date.now();
 }
 
+function doesSlotOverlapBlockedTime(date: string, slot: TimeSlot, blockedTime: BlockedTime) {
+  const slotStart = new Date(`${date}T${slot.startTime}:00`).getTime();
+  const slotEnd = new Date(`${date}T${slot.endTime}:00`).getTime();
+  const blockedStart = new Date(blockedTime.start_time).getTime();
+  const blockedEnd = new Date(blockedTime.end_time).getTime();
+
+  return slotStart < blockedEnd && slotEnd > blockedStart;
+}
+
 type SupabaseQueryName = "resources" | "bookings" | "blocked_times";
 
 type DevelopmentError = {
@@ -251,12 +260,24 @@ export default function BookingPage({ params }: BookingPageProps) {
   const unavailableTimes = useMemo(() => {
     return new Set([
       ...bookings.map((booking) => normalizeTime(booking.start_time)),
-      ...blockedTimes.map((blockedTime) =>
-        normalizeTime(blockedTime.start_time),
-      ),
     ]);
-  }, [blockedTimes, bookings]);
+  }, [bookings]);
   const timeSlots = useMemo(() => generateTimeSlots(resource), [resource]);
+  const visibleTimeSlots = useMemo(
+    () => timeSlots.filter((slot) => !isSlotPassed(selectedDate, slot)),
+    [selectedDate, timeSlots],
+  );
+  const blockedSlotTimes = useMemo(() => {
+    return new Set(
+      timeSlots
+        .filter((slot) =>
+          blockedTimes.some((blockedTime) =>
+            doesSlotOverlapBlockedTime(selectedDate, slot, blockedTime),
+          ),
+        )
+        .map((slot) => slot.startTime),
+    );
+  }, [blockedTimes, selectedDate, timeSlots]);
 
   async function bookTime(slot: TimeSlot) {
     if (!resource || isBooking) {
@@ -456,10 +477,17 @@ export default function BookingPage({ params }: BookingPageProps) {
             ) : null}
           </div>
 
+          {visibleTimeSlots.length === 0 && selectedDate === formatDate(0) ? (
+            <p className="rounded-2xl bg-slate-50 p-4 text-base font-medium text-slate-600">
+              Ingen flere ledige tider i dag. Velg i morgen.
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3">
-            {timeSlots.map((slot) => {
-              const isUnavailable = unavailableTimes.has(slot.startTime);
-              const hasPassed = isSlotPassed(selectedDate, slot);
+            {visibleTimeSlots.map((slot) => {
+              const isBooked = unavailableTimes.has(slot.startTime);
+              const isBlocked = blockedSlotTimes.has(slot.startTime);
+              const isUnavailable = isBooked || isBlocked;
               const isSelected = selectedTime === slot.label;
               const durationMinutes =
                 timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime);
@@ -470,14 +498,11 @@ export default function BookingPage({ params }: BookingPageProps) {
                     className={`flex min-h-20 flex-col items-start justify-between rounded-2xl p-4 text-left shadow-sm ring-1 ${
                       isUnavailable
                         ? "bg-slate-100 text-slate-400 ring-slate-200"
-                        : hasPassed
-                          ? "bg-slate-100 text-slate-400 ring-slate-200"
                         : isSelected
                           ? "bg-blue-600 text-white ring-blue-600"
                           : "bg-white text-slate-950 ring-slate-200"
                     }`}
                     disabled={
-                      hasPassed ||
                       isUnavailable ||
                       isLoading ||
                       Boolean(errorMessage)
@@ -491,11 +516,7 @@ export default function BookingPage({ params }: BookingPageProps) {
                   >
                     <span className="text-lg font-bold">{slot.label}</span>
                     <span className="text-sm font-semibold">
-                      {hasPassed
-                        ? "Passert"
-                        : isUnavailable
-                          ? "Opptatt"
-                          : "Ledig"}
+                      {isBlocked ? "Sperret" : isBooked ? "Opptatt" : "Ledig"}
                     </span>
                   </button>
 

@@ -47,6 +47,21 @@ export type Database = {
         };
         Returns: void;
       };
+      create_blocked_time: {
+        Args: {
+          p_end_time: string;
+          p_reason: string;
+          p_resource_id: string;
+          p_start_time: string;
+        };
+        Returns: void;
+      };
+      delete_blocked_time: {
+        Args: {
+          p_blocked_time_id: string;
+        };
+        Returns: void;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
