@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 type AppShellProps = {
   active?: "home" | "mine" | "alerts" | "more";
   children: ReactNode;
+  headerBackHref?: string;
 };
 
 type NavKey = NonNullable<AppShellProps["active"]>;
@@ -41,20 +42,32 @@ export function LogoFallback() {
   );
 }
 
-export function AppHeader() {
+export function AppHeader({ backHref }: { backHref?: string }) {
   return (
     <header className="sticky top-0 z-20 flex min-h-[76px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 py-3 backdrop-blur">
-      <Link className="flex min-w-0 items-center gap-3" href="/">
-        <LogoMark />
-        <span className="min-w-0 text-left">
-          <span className="block text-sm font-extrabold uppercase tracking-[0.08em] text-slate-950">
-            Reistadlia Vel
+      <div className="flex min-w-0 items-center gap-3">
+        {backHref ? (
+          <Link
+            aria-label="Tilbake"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-2xl font-semibold leading-none text-slate-700"
+            href={backHref}
+          >
+            ‹
+          </Link>
+        ) : null}
+
+        <Link className="flex min-w-0 items-center gap-3" href="/">
+          <LogoMark />
+          <span className="min-w-0 text-left">
+            <span className="block text-sm font-extrabold uppercase tracking-[0.08em] text-slate-950">
+              Reistadlia Vel
+            </span>
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 min-[360px]:block">
+              Aktiv, trivelig, trygg
+            </span>
           </span>
-          <span className="hidden text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 min-[360px]:block">
-            Aktiv, trivelig, trygg
-          </span>
-        </span>
-      </Link>
+        </Link>
+      </div>
 
       <button
         aria-label="Åpne meny"
@@ -162,11 +175,15 @@ function NavIcon({ name }: { name: NavKey }) {
   );
 }
 
-export function AppShell({ active = "home", children }: AppShellProps) {
+export function AppShell({
+  active = "home",
+  children,
+  headerBackHref,
+}: AppShellProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-slate-50 shadow-2xl shadow-slate-200/80">
-        <AppHeader />
+        <AppHeader backHref={headerBackHref} />
         <div className="flex-1 px-5 pb-32 pt-4">{children}</div>
         <BottomNav active={active} />
       </div>

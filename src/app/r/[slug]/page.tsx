@@ -9,16 +9,22 @@ import { createSupabaseClient } from "@/lib/supabase";
 import type { Booking, BlockedTime, Resource } from "@/lib/types";
 
 const fallbackTimeSlots = [
-  { endTime: "09:00", label: "08:00–09:00", startTime: "08:00" },
-  { endTime: "10:00", label: "09:00–10:00", startTime: "09:00" },
-  { endTime: "11:00", label: "10:00–11:00", startTime: "10:00" },
-  { endTime: "12:00", label: "11:00–12:00", startTime: "11:00" },
+  { endTime: "09:00", label: "08:00-09:00", startTime: "08:00" },
+  { endTime: "10:00", label: "09:00-10:00", startTime: "09:00" },
+  { endTime: "11:00", label: "10:00-11:00", startTime: "10:00" },
+  { endTime: "12:00", label: "11:00-12:00", startTime: "11:00" },
 ];
 
 type TimeSlot = {
   endTime: string;
   label: string;
   startTime: string;
+};
+
+type CalendarDay = {
+  date: string;
+  day: number;
+  isCurrentMonth: boolean;
 };
 
 function formatDate(offsetDays: number) {
@@ -28,12 +34,70 @@ function formatDate(offsetDays: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function formatDateFromDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function createLocalDate(date: string) {
+  return new Date(`${date}T12:00:00`);
+}
+
 function formatDisplayDate(date: string) {
   return new Intl.DateTimeFormat("nb-NO", {
     day: "2-digit",
     month: "long",
     weekday: "long",
   }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatCalendarMonth(date: Date) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function getCalendarDays(monthDate: Date) {
+  const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 12);
+  const firstGridDay = new Date(firstDay);
+  const mondayBasedDay = (firstDay.getDay() + 6) % 7;
+  firstGridDay.setDate(firstDay.getDate() - mondayBasedDay);
+
+  return Array.from({ length: 42 }, (_, index): CalendarDay => {
+    const date = new Date(firstGridDay);
+    date.setDate(firstGridDay.getDate() + index);
+
+    return {
+      date: formatDateFromDate(date),
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === monthDate.getMonth(),
+    };
+  });
+}
+
+function shiftMonth(date: Date, direction: -1 | 1) {
+  return new Date(date.getFullYear(), date.getMonth() + direction, 1, 12);
+}
+
+function getMaxDaysAhead(resource: Resource | null) {
+  if (resource && "max_days_ahead" in resource) {
+    const value = (resource as Resource & { max_days_ahead?: unknown }).max_days_ahead;
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return 30;
+}
+
+function isDateAllowed(date: string, maxDaysAhead: number) {
+  const today = createLocalDate(formatDate(0));
+  const maxDate = new Date(today);
+  maxDate.setDate(today.getDate() + maxDaysAhead);
+  const targetDate = createLocalDate(date);
+
+  return targetDate >= today && targetDate <= maxDate;
 }
 
 function normalizeTime(time: string) {
@@ -87,7 +151,7 @@ function generateTimeSlots(resource: Resource | null) {
 
     slots.push({
       endTime,
-      label: `${startTime}–${endTime}`,
+      label: `${startTime}-${endTime}`,
       startTime,
     });
   }
@@ -133,6 +197,9 @@ type BookingPageProps = {
 export default function BookingPage({ params }: BookingPageProps) {
   const [slug, setSlug] = useState("");
   const [selectedDate, setSelectedDate] = useState(formatDate(0));
+  const [calendarMonth, setCalendarMonth] = useState(() =>
+    createLocalDate(formatDate(0)),
+  );
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
@@ -278,6 +345,20 @@ export default function BookingPage({ params }: BookingPageProps) {
         .map((slot) => slot.startTime),
     );
   }, [blockedTimes, selectedDate, timeSlots]);
+  const selectedSlot = useMemo(
+    () => visibleTimeSlots.find((slot) => slot.label === selectedTime) ?? null,
+    [selectedTime, visibleTimeSlots],
+  );
+  const maxDaysAhead = useMemo(() => getMaxDaysAhead(resource), [resource]);
+  const timeSlotRows = useMemo(() => {
+    const rows: TimeSlot[][] = [];
+
+    for (let index = 0; index < visibleTimeSlots.length; index += 2) {
+      rows.push(visibleTimeSlots.slice(index, index + 2));
+    }
+
+    return rows;
+  }, [visibleTimeSlots]);
 
   async function bookTime(slot: TimeSlot) {
     if (!resource || isBooking) {
@@ -363,77 +444,22 @@ export default function BookingPage({ params }: BookingPageProps) {
   }
 
   return (
-    <AppShell active="home">
-      <section className="flex flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            aria-label="Tilbake til hjem"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl font-bold text-slate-700 shadow-sm ring-1 ring-slate-200"
-            href="/"
-          >
-            ‹
-          </Link>
-          <div>
-            <p className="text-sm font-semibold text-blue-700">
-              Velg dato og ledig tid
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-              Tennisbane
-            </h1>
-          </div>
-        </div>
+    <AppShell active="home" headerBackHref="/">
+      <section className="flex flex-col gap-3">
+        <StepIndicator hasSelectedTime={Boolean(selectedSlot)} />
 
-        <div className="grid grid-cols-3 gap-2 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-          {["Velg dato", "Velg tid", "Bekreft"].map((step, index) => (
-            <div
-              className="flex flex-col items-center gap-2 rounded-2xl bg-slate-50 px-2 py-3 text-center"
-              key={step}
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-                {index + 1}
-              </span>
-              <span className="text-xs font-bold text-slate-700">{step}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-          <h2 className="mb-3 text-base font-bold text-slate-950">Velg dato</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              className={`h-14 rounded-2xl px-4 text-base font-bold shadow-sm ring-1 ring-slate-200 ${
-                selectedDate === formatDate(0)
-                  ? "bg-blue-600 text-white ring-blue-600"
-                  : "bg-slate-50 text-slate-800"
-              }`}
-              onClick={() => {
-                setSelectedDate(formatDate(0));
-                setSelectedTime(null);
-                setSubmissionError("");
-                setConfirmationMessage("");
-              }}
-              type="button"
-            >
-              I dag
-            </button>
-            <button
-              className={`h-14 rounded-2xl px-4 text-base font-bold shadow-sm ring-1 ring-slate-200 ${
-                selectedDate === formatDate(1)
-                  ? "bg-blue-600 text-white ring-blue-600"
-                  : "bg-slate-50 text-slate-800"
-              }`}
-              onClick={() => {
-                setSelectedDate(formatDate(1));
-                setSelectedTime(null);
-                setSubmissionError("");
-                setConfirmationMessage("");
-              }}
-              type="button"
-            >
-              I morgen
-            </button>
-          </div>
-        </div>
+        <CalendarCard
+          calendarMonth={calendarMonth}
+          maxDaysAhead={maxDaysAhead}
+          onMonthChange={setCalendarMonth}
+          onSelectDate={(date) => {
+            setSelectedDate(date);
+            setSelectedTime(null);
+            setSubmissionError("");
+            setConfirmationMessage("");
+          }}
+          selectedDate={selectedDate}
+        />
 
         {errorMessage ? (
           <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
@@ -453,7 +479,7 @@ export default function BookingPage({ params }: BookingPageProps) {
         ) : null}
 
         {confirmationMessage ? (
-          <div className="rounded-3xl bg-white p-5 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
+          <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
             <p className="font-bold text-slate-950">{confirmationMessage}</p>
             <Link
               className="mt-4 flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-5 text-base font-bold text-white"
@@ -464,10 +490,12 @@ export default function BookingPage({ params }: BookingPageProps) {
           </div>
         ) : null}
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-4 flex items-end justify-between gap-3">
+        <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-3 flex items-end justify-between gap-3 px-1">
             <div>
-              <h2 className="text-base font-bold text-slate-950">Velg tid</h2>
+              <h2 className="text-sm font-bold text-slate-950">
+                Velg tilgjengelig tid
+              </h2>
               <p className="text-sm font-medium capitalize text-slate-500">
                 {formatDisplayDate(selectedDate)}
               </p>
@@ -480,144 +508,96 @@ export default function BookingPage({ params }: BookingPageProps) {
           </div>
 
           {visibleTimeSlots.length === 0 && selectedDate === formatDate(0) ? (
-            <p className="rounded-2xl bg-slate-50 p-4 text-base font-medium text-slate-600">
+            <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
               Ingen flere ledige tider i dag. Velg i morgen.
             </p>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
-            {visibleTimeSlots.map((slot) => {
-              const isBooked = unavailableTimes.has(slot.startTime);
-              const isBlocked = blockedSlotTimes.has(slot.startTime);
-              const isUnavailable = isBooked || isBlocked;
-              const isSelected = selectedTime === slot.label;
-              const durationMinutes =
-                timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime);
+          <div className="grid gap-2">
+            {timeSlotRows.map((row) => {
+              const rowSelectedSlot =
+                row.find((slot) => selectedTime === slot.label) ?? null;
 
               return (
-                <div className="contents" key={slot.startTime}>
-                  <button
-                    className={`flex min-h-20 flex-col items-start justify-between rounded-2xl p-4 text-left shadow-sm ring-1 ${
-                      isUnavailable
-                        ? "bg-slate-100 text-slate-400 ring-slate-200"
-                        : isSelected
-                          ? "bg-blue-600 text-white ring-blue-600"
-                          : "bg-white text-slate-950 ring-slate-200"
-                    }`}
-                    disabled={
-                      isUnavailable ||
-                      isLoading ||
-                      Boolean(errorMessage)
-                    }
-                    onClick={() => {
-                      setSelectedTime(isSelected ? null : slot.label);
-                      setSubmissionError("");
-                      setConfirmationMessage("");
-                    }}
-                    type="button"
-                  >
-                    <span className="text-lg font-bold">{slot.label}</span>
-                    <span className="text-sm font-semibold">
-                      {isBlocked ? "Sperret" : isBooked ? "Opptatt" : "Ledig"}
-                    </span>
-                  </button>
+                <div className="grid gap-2" key={row[0]?.startTime}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {row.map((slot) => {
+                      const isBooked = unavailableTimes.has(slot.startTime);
+                      const isBlocked = blockedSlotTimes.has(slot.startTime);
+                      const isUnavailable = isBooked || isBlocked;
+                      const isSelected = selectedTime === slot.label;
+
+                      return (
+                        <button
+                          className={`flex min-h-[72px] flex-col justify-between rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors ${
+                            isUnavailable
+                              ? "bg-slate-100 text-slate-400 ring-slate-200"
+                              : isSelected
+                                ? "bg-blue-600 text-white ring-blue-600"
+                                : "bg-white text-slate-950 ring-slate-200"
+                          }`}
+                          disabled={
+                            isUnavailable || isLoading || Boolean(errorMessage)
+                          }
+                          key={slot.startTime}
+                          onClick={() => {
+                            setSelectedTime(isSelected ? null : slot.label);
+                            setSubmissionError("");
+                            setConfirmationMessage("");
+                          }}
+                          type="button"
+                        >
+                          <span className="text-base font-bold">{slot.label}</span>
+                          <span
+                            className={`text-xs font-bold ${
+                              isUnavailable
+                                ? "text-slate-400"
+                                : isSelected
+                                  ? "text-blue-100"
+                                  : "text-emerald-600"
+                            }`}
+                          >
+                            {isBlocked
+                              ? "Sperret"
+                              : isBooked
+                                ? "Opptatt"
+                                : "Ledig"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   <div
-                    aria-hidden={!isSelected}
-                    className={`col-span-2 grid transition-all duration-300 ease-out ${
-                      isSelected
+                    aria-hidden={!rowSelectedSlot}
+                    className={`grid transition-all duration-300 ease-out ${
+                      rowSelectedSlot
                         ? "grid-rows-[1fr] opacity-100"
                         : "grid-rows-[0fr] opacity-0"
                     }`}
                   >
                     <div className="overflow-hidden">
-                      {isSelected ? (
-                        <form
-                          className="mt-1 flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-lg shadow-blue-950/10 ring-1 ring-blue-100"
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            bookTime(slot);
+                      {rowSelectedSlot ? (
+                        <BookingConfirmation
+                          durationMinutes={
+                            timeToMinutes(rowSelectedSlot.endTime) -
+                            timeToMinutes(rowSelectedSlot.startTime)
+                          }
+                          guestName={guestName}
+                          guestPhone={guestPhone}
+                          isBooking={isBooking}
+                          onCancel={() => {
+                            setSelectedTime(null);
+                            setSubmissionError("");
                           }}
-                        >
-                          <div>
-                            <h3 className="text-xl font-bold text-slate-950">
-                              Bekreft booking
-                            </h3>
-                            <p className="mt-1 text-sm font-medium text-slate-500">
-                              Sjekk detaljene før du reserverer.
-                            </p>
-                          </div>
-
-                          <div className="grid gap-2 rounded-2xl bg-slate-50 p-4">
-                            <DetailRow
-                              label="Fasilitet"
-                              value={resource?.name ?? "Tennisbane"}
-                            />
-                            <DetailRow
-                              label="Dato"
-                              value={formatDisplayDate(selectedDate)}
-                            />
-                            <DetailRow label="Tidspunkt" value={slot.label} />
-                            <DetailRow
-                              label="Varighet"
-                              value={`${durationMinutes} minutter`}
-                            />
-                          </div>
-
-                          <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
-                            Navn
-                            <input
-                              className="h-14 rounded-2xl border border-slate-200 bg-white px-4 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                              name="name"
-                              onChange={(event) =>
-                                setGuestName(event.target.value)
-                              }
-                              required
-                              type="text"
-                              value={guestName}
-                            />
-                          </label>
-
-                          <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
-                            Mobilnummer
-                            <input
-                              className="h-14 rounded-2xl border border-slate-200 bg-white px-4 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                              inputMode="tel"
-                              name="phone"
-                              onChange={(event) =>
-                                setGuestPhone(event.target.value)
-                              }
-                              required
-                              type="tel"
-                              value={guestPhone}
-                            />
-                          </label>
-
-                          {submissionError ? (
-                            <p className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
-                              {submissionError}
-                            </p>
-                          ) : null}
-
-                          <button
-                            className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 disabled:opacity-60"
-                            disabled={isBooking}
-                            type="submit"
-                          >
-                            {isBooking ? "Reserverer..." : "Reserver"}
-                          </button>
-
-                          <button
-                            className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
-                            onClick={() => {
-                              setSelectedTime(null);
-                              setSubmissionError("");
-                            }}
-                            type="button"
-                          >
-                            Avbryt
-                          </button>
-                        </form>
+                          onGuestNameChange={setGuestName}
+                          onGuestPhoneChange={setGuestPhone}
+                          onSubmit={() => bookTime(rowSelectedSlot)}
+                          resourceName={resource?.name ?? "Tennisbane"}
+                          selectedDate={selectedDate}
+                          slotLabel={rowSelectedSlot.label}
+                          submissionError={submissionError}
+                        />
                       ) : null}
                     </div>
                   </div>
@@ -625,19 +605,290 @@ export default function BookingPage({ params }: BookingPageProps) {
               );
             })}
           </div>
-        </div>
+        </section>
       </section>
     </AppShell>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function StepIndicator({ hasSelectedTime }: { hasSelectedTime: boolean }) {
+  const activeStep = hasSelectedTime ? 3 : 2;
+  const steps = ["1. Velg dato", "2. Velg tid", "3. Bekreft"];
+
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-sm font-semibold text-slate-500">{label}</span>
+    <div className="h-11 rounded-2xl bg-white px-2 shadow-sm ring-1 ring-slate-200">
+      <div className="grid h-full grid-cols-3 gap-1">
+        {steps.map((step, index) => {
+          const number = index + 1;
+          const isActive = number === activeStep;
+
+          return (
+            <div
+              className="relative flex items-center justify-center px-1 text-center"
+              key={step}
+            >
+              <span
+                className={`text-[11px] font-bold leading-tight ${
+                  isActive ? "text-blue-700" : "text-slate-500"
+                }`}
+              >
+                {step}
+              </span>
+              <span
+                className={`absolute bottom-0 left-3 right-3 h-0.5 rounded-full ${
+                  isActive ? "bg-blue-600" : "bg-transparent"
+                }`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CalendarCard({
+  calendarMonth,
+  maxDaysAhead,
+  onMonthChange,
+  onSelectDate,
+  selectedDate,
+}: {
+  calendarMonth: Date;
+  maxDaysAhead: number;
+  onMonthChange: (date: Date) => void;
+  onSelectDate: (date: string) => void;
+  selectedDate: string;
+}) {
+  const calendarDays = getCalendarDays(calendarMonth);
+  const weekdays = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
+
+  return (
+    <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <button
+          aria-label="Forrige måned"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          onClick={() => onMonthChange(shiftMonth(calendarMonth, -1))}
+          type="button"
+        >
+          ‹
+        </button>
+        <h2 className="text-base font-bold capitalize text-slate-950">
+          {formatCalendarMonth(calendarMonth)}
+        </h2>
+        <button
+          aria-label="Neste måned"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          onClick={() => onMonthChange(shiftMonth(calendarMonth, 1))}
+          type="button"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-7 gap-1 text-center">
+        {weekdays.map((weekday) => (
+          <div className="text-[11px] font-bold text-slate-400" key={weekday}>
+            {weekday}
+          </div>
+        ))}
+
+        {calendarDays.map((day) => {
+          const isSelected = selectedDate === day.date;
+          const isAllowed = day.isCurrentMonth && isDateAllowed(day.date, maxDaysAhead);
+
+          return (
+            <button
+              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+                isSelected
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : isAllowed
+                    ? "text-slate-800 hover:bg-blue-50 hover:text-blue-700"
+                    : "text-slate-300"
+              }`}
+              disabled={!isAllowed}
+              key={day.date}
+              onClick={() => onSelectDate(day.date)}
+              type="button"
+            >
+              {day.day}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function BookingConfirmation({
+  durationMinutes,
+  guestName,
+  guestPhone,
+  isBooking,
+  onCancel,
+  onGuestNameChange,
+  onGuestPhoneChange,
+  onSubmit,
+  resourceName,
+  selectedDate,
+  slotLabel,
+  submissionError,
+}: {
+  durationMinutes: number;
+  guestName: string;
+  guestPhone: string;
+  isBooking: boolean;
+  onCancel: () => void;
+  onGuestNameChange: (value: string) => void;
+  onGuestPhoneChange: (value: string) => void;
+  onSubmit: () => void;
+  resourceName: string;
+  selectedDate: string;
+  slotLabel: string;
+  submissionError: string;
+}) {
+  return (
+    <form
+      className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-lg shadow-blue-950/10 ring-1 ring-blue-100"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <div>
+        <h2 className="text-xl font-bold text-slate-950">Bekreft booking</h2>
+        <p className="mt-1 text-sm font-medium text-slate-500">
+          Sjekk detaljene før du reserverer.
+        </p>
+      </div>
+
+      <div className="grid gap-2 rounded-2xl bg-slate-50 p-3">
+        <DetailRow icon="court" label="Fasilitet" value={resourceName} />
+        <DetailRow icon="date" label="Dato" value={formatDisplayDate(selectedDate)} />
+        <DetailRow icon="time" label="Tidspunkt" value={slotLabel} />
+        <DetailRow icon="duration" label="Varighet" value={`${durationMinutes} minutter`} />
+      </div>
+
+      <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
+        Navn
+        <input
+          className="h-14 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          name="name"
+          onChange={(event) => onGuestNameChange(event.target.value)}
+          required
+          type="text"
+          value={guestName}
+        />
+      </label>
+
+      <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
+        Mobilnummer
+        <input
+          className="h-14 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          inputMode="tel"
+          name="phone"
+          onChange={(event) => onGuestPhoneChange(event.target.value)}
+          required
+          type="tel"
+          value={guestPhone}
+        />
+      </label>
+
+      {submissionError ? (
+        <p className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+          {submissionError}
+        </p>
+      ) : null}
+
+      <button
+        className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 disabled:opacity-60"
+        disabled={isBooking}
+        type="submit"
+      >
+        {isBooking ? "Reserverer..." : "Reserver"}
+      </button>
+
+      <button
+        className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
+        onClick={onCancel}
+        type="button"
+      >
+        Avbryt
+      </button>
+    </form>
+  );
+}
+
+function DetailRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: "court" | "date" | "time" | "duration";
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
+      <div className="flex items-center gap-2">
+        <DetailIcon name={icon} />
+        <span className="text-sm font-semibold text-slate-500">{label}</span>
+      </div>
       <span className="text-right text-sm font-bold capitalize text-slate-900">
         {value}
       </span>
     </div>
+  );
+}
+
+function DetailIcon({ name }: { name: "court" | "date" | "time" | "duration" }) {
+  const paths = {
+    court: (
+      <>
+        <rect height="14" rx="2" width="16" x="4" y="5" />
+        <path d="M12 5v14" />
+        <path d="M4 12h16" />
+      </>
+    ),
+    date: (
+      <>
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <rect height="18" rx="2" width="18" x="3" y="4" />
+        <path d="M3 10h18" />
+      </>
+    ),
+    time: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </>
+    ),
+    duration: (
+      <>
+        <path d="M12 6v6l4 2" />
+        <path d="M5 3 3 5" />
+        <path d="m19 3 2 2" />
+        <circle cx="12" cy="13" r="8" />
+      </>
+    ),
+  };
+
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        {paths[name]}
+      </svg>
+    </span>
   );
 }
