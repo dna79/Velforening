@@ -36,9 +36,15 @@ function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const ADMIN_ACCESS_KEY = "admin_access_granted";
+
 export default function AdminPage() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>([]);
+  const [adminCode, setAdminCode] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
+  const [hasCheckedAdminAccess, setHasCheckedAdminAccess] = useState(false);
   const [date, setDate] = useState(getTodayDate());
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("09:00");
@@ -49,6 +55,13 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHasAdminAccess(
+      window.sessionStorage.getItem(ADMIN_ACCESS_KEY) === "true",
+    );
+    setHasCheckedAdminAccess(true);
+  }, []);
 
   async function loadBlockedTimes(resourceId: string) {
     const supabase = createSupabaseClient();
@@ -80,6 +93,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    if (!hasAdminAccess) {
+      return;
+    }
+
     let isActive = true;
 
     async function loadAdminData() {
@@ -129,7 +146,30 @@ export default function AdminPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [hasAdminAccess]);
+
+  function logInAdmin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (adminCode === process.env.NEXT_PUBLIC_ADMIN_PIN) {
+      window.sessionStorage.setItem(ADMIN_ACCESS_KEY, "true");
+      setHasAdminAccess(true);
+      setLoginError("");
+      setAdminCode("");
+    } else {
+      setLoginError("Feil kode");
+    }
+  }
+
+  function logOutAdmin() {
+    window.sessionStorage.removeItem(ADMIN_ACCESS_KEY);
+    setHasAdminAccess(false);
+    setResource(null);
+    setBlockedTimes([]);
+    setMessage("");
+    setErrorMessage("");
+    setAdminError(null);
+  }
 
   async function createBlockedTime(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -220,6 +260,68 @@ export default function AdminPage() {
     setDeletingId(null);
   }
 
+  if (!hasCheckedAdminAccess) {
+    return (
+      <AppShell active="more">
+        <p className="text-base font-medium text-slate-500">Laster...</p>
+      </AppShell>
+    );
+  }
+
+  if (!hasAdminAccess) {
+    return (
+      <AppShell active="more">
+        <section className="flex min-h-[calc(100vh-11rem)] flex-col justify-center gap-6">
+          <form
+            className="flex flex-col gap-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+            onSubmit={logInAdmin}
+          >
+            <div>
+              <p className="text-sm font-semibold text-blue-700">Styret</p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+                Admin
+              </h1>
+              <p className="mt-3 text-base font-medium text-slate-600">
+                Skriv inn adminkode for å fortsette
+              </p>
+            </div>
+
+            <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
+              Kode
+              <input
+                className="h-14 rounded-2xl border border-slate-200 px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                onChange={(event) => {
+                  setAdminCode(event.target.value);
+                  setLoginError("");
+                }}
+                type="password"
+                value={adminCode}
+              />
+            </label>
+
+            {loginError ? (
+              <p className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+                {loginError}
+              </p>
+            ) : null}
+
+            <button
+              className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25"
+              type="submit"
+            >
+              Logg inn
+            </button>
+          </form>
+
+          <p className="rounded-3xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+            Dette er enkel MVP-beskyttelse. Før produksjon bør admin sikres
+            bedre.
+          </p>
+        </section>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell active="more">
       <section className="flex flex-col gap-6">
@@ -238,6 +340,14 @@ export default function AdminPage() {
             Sperr tider for {resource?.name ?? "Tennisbane"}.
           </p>
         </div>
+
+        <button
+          className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
+          onClick={logOutAdmin}
+          type="button"
+        >
+          Logg ut admin
+        </button>
 
         {message ? (
           <p className="rounded-3xl bg-white p-4 text-base font-bold text-slate-950 shadow-sm ring-1 ring-slate-200">
