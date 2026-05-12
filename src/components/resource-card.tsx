@@ -1,11 +1,9 @@
-import Link from "next/link";
-
 export function ResourceCard() {
   return (
     <article className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200">
       <CourtIllustration />
 
-      <div className="flex flex-col gap-4 p-5">
+      <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-950">
@@ -19,13 +17,6 @@ export function ResourceCard() {
             08:00-22:00
           </span>
         </div>
-
-        <Link
-          className="flex h-14 items-center justify-center rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-          href="/r/tennisbane"
-        >
-          Book tid
-        </Link>
       </div>
     </article>
   );

@@ -7,12 +7,14 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-const navItems = [
+type NavKey = NonNullable<AppShellProps["active"]>;
+
+const navItems: Array<{ href: string; key: NavKey; label: string }> = [
   { href: "/", key: "home", label: "Hjem" },
   { href: "/mine", key: "mine", label: "Mine bookinger" },
   { href: "#varsler", key: "alerts", label: "Varsler" },
   { href: "/admin", key: "more", label: "Mer" },
-] as const;
+];
 
 export function AppLogo({ large = false }: { large?: boolean }) {
   return (
@@ -102,16 +104,61 @@ export function BottomNav({ active = "home" }: { active?: AppShellProps["active"
             href={item.href}
             key={item.key}
           >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                isActive ? "bg-blue-600" : "bg-slate-300"
-              }`}
-            />
+            <NavIcon name={item.key} />
             {item.label}
           </Link>
         );
       })}
     </nav>
+  );
+}
+
+function NavIcon({ name }: { name: NavKey }) {
+  const icons: Record<NavKey, ReactNode> = {
+    home: (
+      <>
+        <path d="m3 10 9-7 9 7" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+      </>
+    ),
+    mine: (
+      <>
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <rect height="18" rx="2" width="18" x="3" y="4" />
+        <path d="M3 10h18" />
+        <path d="m9 16 2 2 4-4" />
+      </>
+    ),
+    alerts: (
+      <>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <path d="M10 21h4" />
+      </>
+    ),
+    more: (
+      <>
+        <circle cx="5" cy="12" r="1.5" />
+        <circle cx="12" cy="12" r="1.5" />
+        <circle cx="19" cy="12" r="1.5" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      {icons[name]}
+    </svg>
   );
 }
 

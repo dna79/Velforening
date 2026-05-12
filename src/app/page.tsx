@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { ResourceCard } from "@/components/resource-card";
@@ -10,7 +11,8 @@ type IconName =
   | "sun"
   | "thermometer"
   | "wind"
-  | "drop";
+  | "drop"
+  | "calendar";
 
 const infoCards: Array<{ icon: IconName; label: string; value: string }> = [
   { icon: "tag", label: "Pris", value: "Gratis for medlemmer" },
@@ -48,6 +50,14 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        <Link
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+          href="/r/tennisbane"
+        >
+          <AppIcon name="calendar" />
+          Book tid
+        </Link>
 
         <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
           <div className="flex items-center justify-between gap-3">
@@ -147,6 +157,15 @@ function AppIcon({ name }: { name: IconName }) {
     ),
     drop: (
       <path d="M12 21a6 6 0 0 0 6-6c0-4-6-11-6-11S6 11 6 15a6 6 0 0 0 6 6Z" />
+    ),
+    calendar: (
+      <>
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <rect height="18" rx="2" width="18" x="3" y="4" />
+        <path d="M3 10h18" />
+        <path d="m9 16 2 2 4-4" />
+      </>
     ),
   };
 
