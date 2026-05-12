@@ -374,9 +374,11 @@ export default function BookingPage({ params }: BookingPageProps) {
             ‹
           </Link>
           <div>
-            <p className="text-sm font-semibold text-blue-700">Booking</p>
+            <p className="text-sm font-semibold text-blue-700">
+              Velg dato og ledig tid
+            </p>
             <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-              {resource?.name ?? "Tennisbane"}
+              Tennisbane
             </h1>
           </div>
         </div>
