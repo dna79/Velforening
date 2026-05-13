@@ -44,26 +44,26 @@ export function LogoFallback() {
 
 export function AppHeader({ backHref }: { backHref?: string }) {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[76px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 py-3 backdrop-blur">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="sticky top-0 z-20 flex min-h-[72px] items-center justify-between bg-[#f8fbff]/95 px-5 py-3 backdrop-blur">
+      <div className="flex min-w-0 items-center gap-2.5">
         {backHref ? (
           <Link
             aria-label="Tilbake"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-2xl font-semibold leading-none text-slate-700"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
             href={backHref}
           >
             ‹
           </Link>
         ) : null}
 
-        <Link className="flex min-w-0 items-center gap-3" href="/">
+        <Link className="flex min-w-0 items-center gap-2.5" href="/">
           <LogoMark />
           <span className="min-w-0 text-left">
-            <span className="block text-sm font-extrabold uppercase tracking-[0.08em] text-slate-950">
-              Reistadlia Vel
+            <span className="block text-[13px] font-black uppercase tracking-[0.12em] text-slate-950">
+              REISTADLIA VEL
             </span>
-            <span className="hidden text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 min-[360px]:block">
-              Aktiv, trivelig, trygg
+            <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 min-[340px]:block">
+              AKTIV, TRIVELIG, TRYGG
             </span>
           </span>
         </Link>
@@ -71,7 +71,7 @@ export function AppHeader({ backHref }: { backHref?: string }) {
 
       <button
         aria-label="Åpne meny"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-2xl font-semibold leading-none text-slate-700"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
         type="button"
       >
         ≡
@@ -82,7 +82,7 @@ export function AppHeader({ backHref }: { backHref?: string }) {
 
 function LogoMark() {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100">
       <svg
         aria-hidden="true"
         className="h-8 w-8"
@@ -182,9 +182,9 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-slate-50 shadow-2xl shadow-slate-200/80">
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-[#f8fbff] shadow-2xl shadow-slate-200/80">
         <AppHeader backHref={headerBackHref} />
-        <div className="flex-1 px-5 pb-32 pt-4">{children}</div>
+        <div className="flex-1 px-4 pb-24 pt-1">{children}</div>
         <BottomNav active={active} />
       </div>
     </main>
