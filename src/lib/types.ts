@@ -37,6 +37,24 @@ export type Database = {
         Update: Partial<Resource>;
         Relationships: [];
       };
+      booking_types: {
+        Row: BookingType;
+        Insert: Omit<BookingType, "id" | "created_at"> & {
+          created_at?: string | null;
+          id?: string;
+        };
+        Update: Partial<BookingType>;
+        Relationships: [];
+      };
+      blocked_periods: {
+        Row: BlockedPeriod;
+        Insert: Omit<BlockedPeriod, "id" | "created_at"> & {
+          created_at?: string | null;
+          id?: string;
+        };
+        Update: Partial<BlockedPeriod>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -62,6 +80,13 @@ export type Database = {
         };
         Returns: void;
       };
+      update_booking_request: {
+        Args: {
+          p_booking_id: string;
+          p_status: string;
+        };
+        Returns: void;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -76,6 +101,8 @@ export type Resource = {
   opens_at: string;
   closes_at: string;
   booking_interval_minutes: number;
+  requires_approval?: boolean;
+  description?: string | null;
 };
 
 export type Booking = {
@@ -87,11 +114,34 @@ export type Booking = {
   end_time: string;
   guest_name: string;
   guest_phone: string;
+  guest_email?: string | null;
+  purpose?: string | null;
+  booking_type_id?: string | null;
   device_token: string;
   status: string;
 };
 
 export type BlockedTime = {
+  id: string;
+  created_at: string | null;
+  resource_id: string;
+  start_time: string;
+  end_time: string;
+  reason: string | null;
+};
+
+export type BookingType = {
+  id: string;
+  created_at: string | null;
+  resource_id: string;
+  name: string;
+  slug: string;
+  start_time: string;
+  end_time: string;
+  sort_order: number;
+};
+
+export type BlockedPeriod = {
   id: string;
   created_at: string | null;
   resource_id: string;

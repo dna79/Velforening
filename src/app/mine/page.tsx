@@ -9,12 +9,23 @@ import { DEVICE_TOKEN_KEY, getDeviceToken } from "@/lib/device-token";
 import { createSupabaseClient } from "@/lib/supabase";
 
 type MyBooking = {
+  booking_type_id: string | null;
+  guest_email: string | null;
+  guest_name: string;
+  guest_phone: string;
   id: string;
+  purpose: string | null;
+  resource_id: string;
   start_time: string;
   end_time: string;
   status: string;
+  booking_types: {
+    name: string;
+    slug: string;
+  } | null;
   resources: {
     name: string;
+    slug: string;
   } | null;
 };
 
@@ -73,18 +84,20 @@ export default function MyBookingsPage() {
   useEffect(() => {
     const deviceToken = getDeviceToken();
 
-    setDebugInfo((currentDebugInfo) => ({
-      ...currentDebugInfo,
-      bookingCount: 0,
-      deviceTokenExists: Boolean(deviceToken),
-      deviceTokenPreview: deviceToken?.slice(0, 8) ?? "",
-      error: null,
-      localStorageKey: DEVICE_TOKEN_KEY,
-    }));
+    const timeoutId = window.setTimeout(() => {
+      setDebugInfo((currentDebugInfo) => ({
+        ...currentDebugInfo,
+        bookingCount: 0,
+        deviceTokenExists: Boolean(deviceToken),
+        deviceTokenPreview: deviceToken?.slice(0, 8) ?? "",
+        error: null,
+        localStorageKey: DEVICE_TOKEN_KEY,
+      }));
+    }, 0);
 
     if (!deviceToken) {
-      setIsLoading(false);
-      return;
+      window.setTimeout(() => setIsLoading(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
     const currentDeviceToken = deviceToken;
@@ -95,13 +108,30 @@ export default function MyBookingsPage() {
       setErrorMessage("");
 
       const supabase = createSupabaseClient();
-      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, start_time, end_time, status, resources(name)")
+        .select(`
+          id,
+          start_time,
+          end_time,
+          status,
+          guest_name,
+          guest_phone,
+          guest_email,
+          purpose,
+          resource_id,
+          booking_type_id,
+          resources (
+            name,
+            slug
+          ),
+          booking_types (
+            name,
+            slug
+          )
+        `)
         .eq("device_token", currentDeviceToken)
-        .eq("status", "confirmed")
-        .gte("start_time", nowIso)
+        .in("status", ["confirmed", "requested", "approved"])
         .order("start_time", { ascending: true });
 
       if (!isActive) {
@@ -117,10 +147,9 @@ export default function MyBookingsPage() {
 
         const fallbackResult = await supabase
           .from("bookings")
-          .select("id, start_time, end_time, status")
+          .select("*")
           .eq("device_token", currentDeviceToken)
-          .eq("status", "confirmed")
-          .gte("start_time", nowIso)
+          .in("status", ["confirmed", "requested", "approved"])
           .order("start_time", { ascending: true });
 
         if (!isActive) {
@@ -148,7 +177,8 @@ export default function MyBookingsPage() {
           const fallbackBookings = (fallbackResult.data ?? []).map(
             (booking) => ({
               ...booking,
-              resources: { name: "Tennisbane" },
+              booking_types: null,
+              resources: null,
             }),
           ) as MyBooking[];
 
@@ -164,7 +194,7 @@ export default function MyBookingsPage() {
           }));
         }
       } else {
-        const loadedBookings = (data ?? []) as MyBooking[];
+        const loadedBookings = (data ?? []) as unknown as MyBooking[];
 
         setBookings(loadedBookings);
         setDebugInfo((currentDebugInfo) => ({
@@ -181,6 +211,7 @@ export default function MyBookingsPage() {
 
     return () => {
       isActive = false;
+      window.clearTimeout(timeoutId);
     };
   }, []);
 
@@ -324,8 +355,13 @@ export default function MyBookingsPage() {
             >
               <div className="flex flex-col gap-1">
                 <h2 className="text-xl font-bold text-slate-950">
-                  {booking.resources?.name ?? "Tennisbane"}
+                  {booking.resources?.name ?? "Booking"}
                 </h2>
+                {booking.booking_types ? (
+                  <p className="text-sm font-bold text-blue-700">
+                    {booking.booking_types.name}
+                  </p>
+                ) : null}
                 <p className="text-base font-medium text-slate-600">
                   {formatDate(booking.start_time)}
                 </p>
@@ -335,6 +371,16 @@ export default function MyBookingsPage() {
                 <p className="mt-2 inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
                   Status: {getBookingStatusLabel(booking.status)}
                 </p>
+                {booking.status === "requested" ? (
+                  <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
+                    Forespurt – venter på godkjenning fra styret.
+                  </p>
+                ) : null}
+                {booking.purpose ? (
+                  <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+                    {booking.purpose}
+                  </p>
+                ) : null}
               </div>
 
               {booking.status === "confirmed" ? (

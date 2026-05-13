@@ -1,9 +1,13 @@
 const statusLabels: Record<string, string> = {
   blocked: "Sperret",
-  cancelled: "Avbestilt",
+  cancelled: "Kansellert",
   confirmed: "Bekreftet",
-  expired: "Utløpt",
+  completed: "Gjennomført",
   waiting_list: "Venteliste",
+  requested: "Forespurt",
+  approved: "Godkjent",
+  rejected: "Avslått",
+  expired: "Utløpt",
 };
 
 export function getBookingStatusLabel(status: string) {

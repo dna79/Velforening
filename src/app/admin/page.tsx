@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { getBookingStatusLabel } from "@/lib/booking-status";
 import { createSupabaseClient } from "@/lib/supabase";
-import type { BlockedTime, Resource } from "@/lib/types";
+import type { Booking, BlockedTime, Resource } from "@/lib/types";
+
+type RentalRequest = Booking & {
+  resources: {
+    name: string;
+  } | null;
+};
 
 type AdminError = {
   code?: string;
@@ -40,6 +47,7 @@ const ADMIN_ACCESS_KEY = "admin_access_granted";
 
 export default function AdminPage() {
   const [resource, setResource] = useState<Resource | null>(null);
+  const [rentalRequests, setRentalRequests] = useState<RentalRequest[]>([]);
   const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>([]);
   const [adminCode, setAdminCode] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -55,12 +63,17 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
-    setHasAdminAccess(
-      window.sessionStorage.getItem(ADMIN_ACCESS_KEY) === "true",
-    );
-    setHasCheckedAdminAccess(true);
+    const timeoutId = window.setTimeout(() => {
+      setHasAdminAccess(
+        window.sessionStorage.getItem(ADMIN_ACCESS_KEY) === "true",
+      );
+      setHasCheckedAdminAccess(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   async function loadBlockedTimes(resourceId: string) {
@@ -89,6 +102,29 @@ export default function AdminPage() {
       setBlockedTimes([]);
     } else {
       setBlockedTimes(data ?? []);
+    }
+  }
+
+  async function loadRentalRequests() {
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, resources(name)")
+      .eq("status", "requested")
+      .gte("start_time", new Date().toISOString())
+      .order("start_time", { ascending: true });
+
+    if (error) {
+      console.error("Kunne ikke hente leieforespørsler", {
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        message: error.message,
+      });
+      setErrorMessage("Kunne ikke hente leieforespørsler.");
+      setRentalRequests([]);
+    } else {
+      setRentalRequests((data ?? []) as RentalRequest[]);
     }
   }
 
@@ -136,6 +172,16 @@ export default function AdminPage() {
       setResource(data);
       await loadBlockedTimes(data.id);
 
+      const { data: velhusetData, error: velhusetError } = await supabase
+        .from("resources")
+        .select("*")
+        .eq("slug", "velhuset")
+        .single();
+
+      if (!velhusetError && velhusetData) {
+        await loadRentalRequests();
+      }
+
       if (isActive) {
         setIsLoading(false);
       }
@@ -166,6 +212,7 @@ export default function AdminPage() {
     setHasAdminAccess(false);
     setResource(null);
     setBlockedTimes([]);
+    setRentalRequests([]);
     setMessage("");
     setErrorMessage("");
     setAdminError(null);
@@ -258,6 +305,43 @@ export default function AdminPage() {
     }
 
     setDeletingId(null);
+  }
+
+  async function updateRentalRequest(bookingId: string, status: "approved" | "rejected") {
+    const confirmed = window.confirm(
+      status === "approved"
+        ? "Vil du godkjenne denne forespørselen?"
+        : "Vil du avslå denne forespørselen?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdatingRequestId(bookingId);
+    setMessage("");
+    setErrorMessage("");
+
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.rpc("update_booking_request", {
+      p_booking_id: bookingId,
+      p_status: status,
+    });
+
+    if (error) {
+      console.error("Kunne ikke oppdatere forespørsel", {
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        message: error.message,
+      });
+      setErrorMessage("Kunne ikke oppdatere forespørselen.");
+    } else {
+      setMessage(status === "approved" ? "Forespørselen er godkjent" : "Forespørselen er avslått");
+      await loadRentalRequests();
+    }
+
+    setUpdatingRequestId(null);
   }
 
   if (!hasCheckedAdminAccess) {
@@ -433,6 +517,81 @@ export default function AdminPage() {
             {isSaving ? "Sperrer..." : "Sperr tid"}
           </button>
         </form>
+
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-950">
+              Forespørsler
+            </h2>
+            <p className="text-sm font-medium text-slate-500">
+              Godkjenn eller avslå kommende forespørsler.
+            </p>
+          </div>
+
+          {!isLoading && rentalRequests.length === 0 ? (
+            <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+              Ingen kommende leieforespørsler.
+            </p>
+          ) : null}
+
+          {rentalRequests.map((request) => (
+            <article
+              className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+              key={request.id}
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-blue-700">
+                      {request.resources?.name ?? "Ressurs"}
+                    </p>
+                    <p className="text-lg font-bold text-slate-950">
+                      {request.guest_name}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-600">
+                      {formatDate(request.start_time)} kl.{" "}
+                      {formatTime(request.start_time)}-
+                      {formatTime(request.end_time)}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                    {getBookingStatusLabel(request.status)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm font-medium text-slate-600">
+                  {request.guest_phone}
+                  {request.guest_email ? ` · ${request.guest_email}` : ""}
+                </p>
+                {request.purpose ? (
+                  <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+                    {request.purpose}
+                  </p>
+                ) : null}
+              </div>
+
+              {request.status === "requested" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    className="h-12 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white disabled:opacity-60"
+                    disabled={updatingRequestId === request.id}
+                    onClick={() => updateRentalRequest(request.id, "approved")}
+                    type="button"
+                  >
+                    Godkjenn
+                  </button>
+                  <button
+                    className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
+                    disabled={updatingRequestId === request.id}
+                    onClick={() => updateRentalRequest(request.id, "rejected")}
+                    type="button"
+                  >
+                    Avslå
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </section>
 
         <section className="flex flex-col gap-4">
           <div>
