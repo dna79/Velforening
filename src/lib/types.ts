@@ -65,6 +65,13 @@ export type Database = {
         };
         Returns: void;
       };
+      cancel_own_booking: {
+        Args: {
+          p_booking_id: string;
+          p_device_token: string;
+        };
+        Returns: void;
+      };
       create_blocked_time: {
         Args: {
           p_end_time: string;
@@ -82,6 +89,7 @@ export type Database = {
       };
       update_booking_request: {
         Args: {
+          p_admin_comment: string;
           p_booking_id: string;
           p_status: string;
         };
@@ -114,6 +122,7 @@ export type Booking = {
   end_time: string;
   guest_name: string;
   guest_phone: string;
+  admin_comment?: string | null;
   guest_email?: string | null;
   purpose?: string | null;
   booking_type_id?: string | null;

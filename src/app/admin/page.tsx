@@ -8,8 +8,13 @@ import { createSupabaseClient } from "@/lib/supabase";
 import type { Booking, BlockedTime, Resource } from "@/lib/types";
 
 type RentalRequest = Booking & {
+  booking_types: {
+    name: string;
+    slug: string;
+  } | null;
   resources: {
     name: string;
+    slug: string;
   } | null;
 };
 
@@ -43,7 +48,7 @@ function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const ADMIN_ACCESS_KEY = "admin_access_granted";
+const ADMIN_ACCESS_KEY = "admin_unlocked";
 
 export default function AdminPage() {
   const [resource, setResource] = useState<Resource | null>(null);
@@ -59,7 +64,10 @@ export default function AdminPage() {
   const [reason, setReason] = useState("Vedlikehold");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [adminError, setAdminError] = useState<AdminError | null>(null);
+  const [, setAdminError] = useState<AdminError | null>(null);
+  const [requestComments, setRequestComments] = useState<
+    Record<string, string>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -105,26 +113,55 @@ export default function AdminPage() {
     }
   }
 
-  async function loadRentalRequests() {
+  async function loadRentalRequests(resourceId: string) {
     const supabase = createSupabaseClient();
     const { data, error } = await supabase
       .from("bookings")
-      .select("*, resources(name)")
+      .select("*, resources(name, slug), booking_types(name, slug)")
+      .eq("resource_id", resourceId)
       .eq("status", "requested")
-      .gte("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
 
     if (error) {
-      console.error("Kunne ikke hente leieforespørsler", {
+      console.warn("Kunne ikke hente leieforespørsler med relasjoner", {
         code: error.code,
         details: error.details,
         hint: error.hint,
         message: error.message,
       });
-      setErrorMessage("Kunne ikke hente leieforespørsler.");
-      setRentalRequests([]);
+
+      const fallbackResult = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("resource_id", resourceId)
+        .eq("status", "requested")
+        .order("start_time", { ascending: true });
+
+      if (fallbackResult.error) {
+        console.warn("Kunne ikke hente leieforespørsler", {
+          code: fallbackResult.error.code,
+          details: fallbackResult.error.details,
+          hint: fallbackResult.error.hint,
+          message: fallbackResult.error.message,
+        });
+        setErrorMessage("Kunne ikke hente leieforespørsler.");
+        setRentalRequests([]);
+      } else {
+        const fallbackRequests = (fallbackResult.data ?? []).map(
+          (request) => ({
+            ...request,
+            booking_types: null,
+            resources: {
+              name: "Velhuset",
+              slug: "velhuset",
+            },
+          }),
+        ) as RentalRequest[];
+
+        setRentalRequests(fallbackRequests);
+      }
     } else {
-      setRentalRequests((data ?? []) as RentalRequest[]);
+      setRentalRequests((data ?? []) as unknown as RentalRequest[]);
     }
   }
 
@@ -179,7 +216,15 @@ export default function AdminPage() {
         .single();
 
       if (!velhusetError && velhusetData) {
-        await loadRentalRequests();
+        await loadRentalRequests(velhusetData.id);
+      } else {
+        console.warn("Kunne ikke hente Velhuset", {
+          code: velhusetError?.code,
+          details: velhusetError?.details,
+          hint: velhusetError?.hint,
+          message: velhusetError?.message,
+        });
+        setRentalRequests([]);
       }
 
       if (isActive) {
@@ -197,14 +242,31 @@ export default function AdminPage() {
   function logInAdmin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (adminCode === process.env.NEXT_PUBLIC_ADMIN_PIN) {
+    const expectedPin = process.env.NEXT_PUBLIC_ADMIN_PIN?.trim();
+    const enteredPin = adminCode.trim();
+
+    console.warn("Admin env debug", {
+      hasExpectedPin: Boolean(expectedPin),
+      expectedPinLength: expectedPin?.length ?? 0,
+      enteredLength: enteredPin.length,
+    });
+
+    if (!expectedPin) {
+      setLoginError(
+        "Admin-PIN er ikke konfigurert. Sjekk at NEXT_PUBLIC_ADMIN_PIN finnes i .env.local og restart dev-serveren.",
+      );
+      return;
+    }
+
+    if (enteredPin === expectedPin) {
       window.sessionStorage.setItem(ADMIN_ACCESS_KEY, "true");
       setHasAdminAccess(true);
       setLoginError("");
       setAdminCode("");
-    } else {
-      setLoginError("Feil kode");
+      return;
     }
+
+    setLoginError("Feil PIN.");
   }
 
   function logOutAdmin() {
@@ -307,29 +369,24 @@ export default function AdminPage() {
     setDeletingId(null);
   }
 
-  async function updateRentalRequest(bookingId: string, status: "approved" | "rejected") {
-    const confirmed = window.confirm(
-      status === "approved"
-        ? "Vil du godkjenne denne forespørselen?"
-        : "Vil du avslå denne forespørselen?",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  async function updateRentalRequest(
+    bookingId: string,
+    status: "approved" | "rejected",
+  ) {
     setUpdatingRequestId(bookingId);
     setMessage("");
     setErrorMessage("");
+    setAdminError(null);
 
     const supabase = createSupabaseClient();
     const { error } = await supabase.rpc("update_booking_request", {
+      p_admin_comment: requestComments[bookingId]?.trim() ?? "",
       p_booking_id: bookingId,
       p_status: status,
     });
 
     if (error) {
-      console.error("Kunne ikke oppdatere forespørsel", {
+      console.warn("Kunne ikke oppdatere forespørsel", {
         code: error.code,
         details: error.details,
         hint: error.hint,
@@ -337,8 +394,19 @@ export default function AdminPage() {
       });
       setErrorMessage("Kunne ikke oppdatere forespørselen.");
     } else {
-      setMessage(status === "approved" ? "Forespørselen er godkjent" : "Forespørselen er avslått");
-      await loadRentalRequests();
+      setRentalRequests((currentRequests) =>
+        currentRequests.filter((request) => request.id !== bookingId),
+      );
+      setRequestComments((currentComments) => {
+        const nextComments = { ...currentComments };
+        delete nextComments[bookingId];
+        return nextComments;
+      });
+      setMessage(
+        status === "approved"
+          ? "Forespørselen er godkjent"
+          : "Forespørselen er avslått",
+      );
     }
 
     setUpdatingRequestId(null);
@@ -442,16 +510,6 @@ export default function AdminPage() {
         {errorMessage ? (
           <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
             <p>{errorMessage}</p>
-
-            {process.env.NODE_ENV === "development" && adminError ? (
-              <div className="mt-4 rounded-2xl bg-slate-100 p-3 text-sm text-slate-800">
-                <p className="font-semibold">Utviklingsdetaljer</p>
-                <p>Melding: {adminError.message ?? "(tom)"}</p>
-                <p>Detaljer: {adminError.details ?? "(tom)"}</p>
-                <p>Hint: {adminError.hint ?? "(tom)"}</p>
-                <p>Kode: {adminError.code ?? "(tom)"}</p>
-              </div>
-            ) : null}
           </div>
         ) : null}
 
@@ -521,16 +579,16 @@ export default function AdminPage() {
         <section className="flex flex-col gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-950">
-              Forespørsler
+              Velhuset-forespørsler
             </h2>
             <p className="text-sm font-medium text-slate-500">
-              Godkjenn eller avslå kommende forespørsler.
+              Godkjenn eller avslå leieforespørsler.
             </p>
           </div>
 
           {!isLoading && rentalRequests.length === 0 ? (
             <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
-              Ingen kommende leieforespørsler.
+              Ingen leieforespørsler venter på behandling.
             </p>
           ) : null}
 
@@ -543,10 +601,10 @@ export default function AdminPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-blue-700">
-                      {request.resources?.name ?? "Ressurs"}
+                      {request.resources?.name ?? "Velhuset"}
                     </p>
                     <p className="text-lg font-bold text-slate-950">
-                      {request.guest_name}
+                      {request.booking_types?.name ?? "Leieforespørsel"}
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-600">
                       {formatDate(request.start_time)} kl.{" "}
@@ -558,36 +616,73 @@ export default function AdminPage() {
                     {getBookingStatusLabel(request.status)}
                   </span>
                 </div>
-                <p className="mt-3 text-sm font-medium text-slate-600">
-                  {request.guest_phone}
-                  {request.guest_email ? ` · ${request.guest_email}` : ""}
-                </p>
+                <div className="mt-4 grid gap-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+                  <p>
+                    <span className="font-bold text-slate-950">Navn:</span>{" "}
+                    {request.guest_name}
+                  </p>
+                  <p>
+                    <span className="font-bold text-slate-950">Telefon:</span>{" "}
+                    {request.guest_phone}
+                  </p>
+                  <p>
+                    <span className="font-bold text-slate-950">E-post:</span>{" "}
+                    {request.guest_email ?? "Ikke oppgitt"}
+                  </p>
+                </div>
                 {request.purpose ? (
                   <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+                    <span className="font-bold text-slate-950">Formål:</span>{" "}
                     {request.purpose}
                   </p>
                 ) : null}
               </div>
 
               {request.status === "requested" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    className="h-12 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white disabled:opacity-60"
-                    disabled={updatingRequestId === request.id}
-                    onClick={() => updateRentalRequest(request.id, "approved")}
-                    type="button"
-                  >
-                    Godkjenn
-                  </button>
-                  <button
-                    className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
-                    disabled={updatingRequestId === request.id}
-                    onClick={() => updateRentalRequest(request.id, "rejected")}
-                    type="button"
-                  >
-                    Avslå
-                  </button>
-                </div>
+                <>
+                  <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
+                    Kommentar til bruker
+                    <textarea
+                      className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+                      disabled={updatingRequestId === request.id}
+                      onChange={(event) =>
+                        setRequestComments((currentComments) => ({
+                          ...currentComments,
+                          [request.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="F.eks. Godkjent. Husk vask etter bruk. eller Avslått fordi velhuset er opptatt."
+                      value={requestComments[request.id] ?? ""}
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      className="h-12 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white disabled:opacity-60"
+                      disabled={updatingRequestId === request.id}
+                      onClick={() =>
+                        updateRentalRequest(request.id, "approved")
+                      }
+                      type="button"
+                    >
+                      {updatingRequestId === request.id
+                        ? "Oppdaterer..."
+                        : "Godkjenn"}
+                    </button>
+                    <button
+                      className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
+                      disabled={updatingRequestId === request.id}
+                      onClick={() =>
+                        updateRentalRequest(request.id, "rejected")
+                      }
+                      type="button"
+                    >
+                      {updatingRequestId === request.id
+                        ? "Oppdaterer..."
+                        : "Avslå"}
+                    </button>
+                  </div>
+                </>
               ) : null}
             </article>
           ))}
