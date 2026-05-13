@@ -1,6 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type AppShellProps = {
   active?: "home" | "mine" | "alerts" | "more";
@@ -8,13 +10,12 @@ type AppShellProps = {
   headerBackHref?: string;
 };
 
-type NavKey = NonNullable<AppShellProps["active"]>;
-
-const navItems: Array<{ href: string; key: NavKey; label: string }> = [
-  { href: "/", key: "home", label: "Hjem" },
-  { href: "/mine", key: "mine", label: "Mine bookinger" },
-  { href: "#varsler", key: "alerts", label: "Varsler" },
-  { href: "/admin", key: "more", label: "Mer" },
+const menuItems = [
+  { href: "/", label: "Forside" },
+  { href: "/tennisbane", label: "Tennisbane" },
+  { href: "/velhuset", label: "Velhuset" },
+  { href: "/mine-bookinger", label: "Mine bookinger" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function AppLogo({ large = false }: { large?: boolean }) {
@@ -43,6 +44,8 @@ export function LogoFallback() {
 }
 
 export function AppHeader({ backHref }: { backHref?: string }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-20 flex min-h-[72px] items-center justify-between bg-[#f8fbff]/95 px-5 py-3 backdrop-blur">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -69,13 +72,32 @@ export function AppHeader({ backHref }: { backHref?: string }) {
         </Link>
       </div>
 
-      <button
-        aria-label="Åpne meny"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
-        type="button"
-      >
-        ≡
-      </button>
+      <div className="relative">
+        <button
+          aria-expanded={isMenuOpen}
+          aria-label="Åpne meny"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
+          onClick={() => setIsMenuOpen((current) => !current)}
+          type="button"
+        >
+          ≡
+        </button>
+
+        {isMenuOpen ? (
+          <nav className="absolute right-0 top-12 w-56 overflow-hidden rounded-3xl bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-blue-100">
+            {menuItems.map((item) => (
+              <Link
+                className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                href={item.href}
+                key={item.href}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
     </header>
   );
 }
@@ -103,80 +125,7 @@ function LogoMark() {
   );
 }
 
-export function BottomNav({ active = "home" }: { active?: AppShellProps["active"] }) {
-  return (
-    <nav className="fixed bottom-0 left-1/2 z-30 grid w-full max-w-[430px] -translate-x-1/2 grid-cols-4 border-t border-slate-200 bg-white/95 px-2 py-2 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur">
-      {navItems.map((item) => {
-        const isActive = active === item.key;
-
-        return (
-          <Link
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold ${
-              isActive ? "bg-blue-50 text-blue-700" : "text-slate-500"
-            }`}
-            href={item.href}
-            key={item.key}
-          >
-            <NavIcon name={item.key} />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-function NavIcon({ name }: { name: NavKey }) {
-  const icons: Record<NavKey, ReactNode> = {
-    home: (
-      <>
-        <path d="m3 10 9-7 9 7" />
-        <path d="M5 10v10h14V10" />
-        <path d="M9 20v-6h6v6" />
-      </>
-    ),
-    mine: (
-      <>
-        <path d="M8 2v4" />
-        <path d="M16 2v4" />
-        <rect height="18" rx="2" width="18" x="3" y="4" />
-        <path d="M3 10h18" />
-        <path d="m9 16 2 2 4-4" />
-      </>
-    ),
-    alerts: (
-      <>
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M10 21h4" />
-      </>
-    ),
-    more: (
-      <>
-        <circle cx="5" cy="12" r="1.5" />
-        <circle cx="12" cy="12" r="1.5" />
-        <circle cx="19" cy="12" r="1.5" />
-      </>
-    ),
-  };
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      {icons[name]}
-    </svg>
-  );
-}
-
 export function AppShell({
-  active = "home",
   children,
   headerBackHref,
 }: AppShellProps) {
@@ -184,8 +133,7 @@ export function AppShell({
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-[#f8fbff] shadow-2xl shadow-slate-200/80">
         <AppHeader backHref={headerBackHref} />
-        <div className="flex-1 px-4 pb-24 pt-1">{children}</div>
-        <BottomNav active={active} />
+        <div className="flex-1 px-4 pb-5 pt-1">{children}</div>
       </div>
     </main>
   );

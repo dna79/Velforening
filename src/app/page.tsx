@@ -9,10 +9,7 @@ export default function Home() {
     <AppShell active="home">
       <section className="flex flex-col gap-2.5">
         <header className="px-1 pb-1 pt-0">
-          <h1 className="text-[34px] font-black leading-none tracking-[-0.03em] text-slate-950">
-            Reistadlia Vel
-          </h1>
-          <p className="mt-2 text-[14px] font-medium leading-5 text-slate-500">
+          <p className="text-[15px] font-semibold leading-5 text-slate-500">
             Book tennisbanen, lei velhuset og følg dine bookinger.
           </p>
         </header>
