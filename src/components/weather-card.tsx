@@ -92,18 +92,20 @@ export function WeatherCard() {
   const forecastClock = formatClock(weather.forecastTime);
 
   return (
-    <section className="rounded-[22px] bg-white px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.07)] ring-1 ring-blue-100/80">
+    <section className="rounded-[28px] bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-400">
           <WeatherIcon name="rain" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-bold leading-tight text-slate-950">Vær nå</h2>
+          <h2 className="text-sm font-bold leading-tight text-[#07122F]">
+            Vær nå
+          </h2>
           <div className="mt-0.5 flex items-end gap-2">
-            <span className="text-[26px] font-black leading-none tracking-[-0.04em] text-slate-950">
+            <span className="text-[26px] font-black leading-none tracking-[-0.04em] text-[#07122F]">
               {formatNumber(weather.temperature, "°")}
             </span>
-            <span className="truncate pb-0.5 text-xs font-medium text-slate-500">
+            <span className="truncate pb-0.5 text-xs font-semibold text-[#53657D]">
               {isUnavailable
                 ? "Værdata er midlertidig utilgjengelig"
                 : weather.summary}
@@ -111,13 +113,13 @@ export function WeatherCard() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-blue-500">
-          <span className="hidden text-xs font-medium text-slate-500 min-[350px]:inline">
+          <span className="hidden text-xs font-semibold text-[#53657D] min-[350px]:inline">
             Vind {formatNumber(weather.windSpeed, " m/s")}
           </span>
           <WeatherIcon name="wind" />
         </div>
       </div>
-      <p className="mt-0.5 text-center text-[9px] font-semibold text-slate-400">
+      <p className="mt-1 text-center text-[9px] font-semibold text-slate-400">
         {updatedClock
           ? `Oppdatert kl. ${updatedClock}`
           : "Oppdateres automatisk"}

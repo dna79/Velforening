@@ -47,25 +47,25 @@ export function AppHeader({ backHref }: { backHref?: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-20 flex min-h-[72px] items-center justify-between bg-[#f8fbff]/95 px-5 py-3 backdrop-blur">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <header className="sticky top-0 z-20 flex min-h-[78px] items-center justify-between bg-[#F4F8FC]/95 px-6 pb-[18px] pt-6 backdrop-blur">
+      <div className="flex min-w-0 items-center gap-3">
         {backHref ? (
           <Link
             aria-label="Tilbake"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-2xl font-semibold leading-none text-[#07122F] shadow-sm ring-1 ring-[#DDE8F5]"
             href={backHref}
           >
             ‹
           </Link>
         ) : null}
 
-        <Link className="flex min-w-0 items-center gap-2.5" href="/">
+        <Link className="flex min-w-0 items-center gap-3" href="/">
           <LogoMark />
           <span className="min-w-0 text-left">
-            <span className="block text-[13px] font-black uppercase tracking-[0.12em] text-slate-950">
+            <span className="block text-[14px] font-black uppercase tracking-[0.12em] text-[#07122F]">
               REISTADLIA VEL
             </span>
-            <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 min-[340px]:block">
+            <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-[#53657D] min-[340px]:block">
               AKTIV, TRIVELIG, TRYGG
             </span>
           </span>
@@ -76,7 +76,7 @@ export function AppHeader({ backHref }: { backHref?: string }) {
         <button
           aria-expanded={isMenuOpen}
           aria-label="Åpne meny"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-2xl font-semibold leading-none text-slate-700 shadow-sm ring-1 ring-blue-100"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-2xl font-semibold leading-none text-[#07122F] shadow-sm ring-1 ring-[#DDE8F5]"
           onClick={() => setIsMenuOpen((current) => !current)}
           type="button"
         >
@@ -84,10 +84,10 @@ export function AppHeader({ backHref }: { backHref?: string }) {
         </button>
 
         {isMenuOpen ? (
-          <nav className="absolute right-0 top-12 w-56 overflow-hidden rounded-3xl bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-blue-100">
+          <nav className="absolute right-0 top-14 w-56 overflow-hidden rounded-[28px] bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-[#DDE8F5]">
             {menuItems.map((item) => (
               <Link
-                className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                className="block rounded-[18px] px-4 py-3 text-sm font-bold text-[#53657D] hover:bg-blue-50 hover:text-blue-700"
                 href={item.href}
                 key={item.href}
                 onClick={() => setIsMenuOpen(false)}
@@ -104,10 +104,10 @@ export function AppHeader({ backHref }: { backHref?: string }) {
 
 function LogoMark() {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-100">
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm ring-1 ring-[#DDE8F5]">
       <svg
         aria-hidden="true"
-        className="h-8 w-8"
+        className="h-9 w-9"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
@@ -125,15 +125,12 @@ function LogoMark() {
   );
 }
 
-export function AppShell({
-  children,
-  headerBackHref,
-}: AppShellProps) {
+export function AppShell({ children, headerBackHref }: AppShellProps) {
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-[#f8fbff] shadow-2xl shadow-slate-200/80">
+    <main className="min-h-screen bg-[#F4F8FC] text-[#07122F]">
+      <div className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[#F4F8FC]">
         <AppHeader backHref={headerBackHref} />
-        <div className="flex-1 px-4 pb-5 pt-1">{children}</div>
+        <div className="flex-1 px-5 pb-0 pt-0">{children}</div>
       </div>
     </main>
   );

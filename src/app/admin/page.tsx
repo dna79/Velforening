@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
 import { getBookingStatusLabel } from "@/lib/booking-status";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -280,14 +281,14 @@ export default function AdminPage() {
       <AppShell active="more">
         <section className="flex min-h-[calc(100vh-9rem)] flex-col justify-center">
           <form
-            className="flex flex-col gap-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+            className="flex flex-col gap-5 rounded-[30px] bg-white p-6 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]"
             onSubmit={logInAdmin}
           >
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="text-[32px] font-black tracking-[-0.04em] text-[#07122F]">
                 Admin
               </h1>
-              <p className="mt-3 text-base font-medium text-slate-600">
+              <p className="mt-3 text-base font-semibold text-[#53657D]">
                 Skriv inn adminkode for å fortsette
               </p>
             </div>
@@ -295,7 +296,7 @@ export default function AdminPage() {
             <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
               Kode
               <input
-                className="h-14 rounded-2xl border border-slate-200 px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="h-14 rounded-[18px] border border-[#DDE8F5] px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 onChange={(event) => {
                   setAdminCode(event.target.value);
                   setLoginError("");
@@ -312,7 +313,7 @@ export default function AdminPage() {
             ) : null}
 
             <button
-              className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25"
+                className="h-14 rounded-[18px] bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25"
               type="submit"
             >
               Logg inn
@@ -326,7 +327,7 @@ export default function AdminPage() {
   return (
     <AppShell active="more">
       <section className="flex flex-col gap-5">
-        <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <header className="rounded-[30px] bg-white p-5 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
           <p className="text-sm font-semibold text-blue-700">Styret</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
             Admin
@@ -337,7 +338,7 @@ export default function AdminPage() {
         </header>
 
         <button
-          className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
+          className="h-12 rounded-[18px] bg-white px-5 text-base font-bold text-blue-700 ring-1 ring-blue-200"
           onClick={logOutAdmin}
           type="button"
         >
@@ -345,7 +346,7 @@ export default function AdminPage() {
         </button>
 
         {message ? (
-          <p className="rounded-3xl bg-white p-4 text-base font-bold text-slate-950 shadow-sm ring-1 ring-slate-200">
+          <p className="rounded-[28px] bg-white p-4 text-base font-bold text-[#07122F] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
             {message}
           </p>
         ) : null}
@@ -366,7 +367,7 @@ export default function AdminPage() {
           ) : null}
 
           {!isLoading && pendingRequests.length === 0 ? (
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="rounded-[28px] bg-white p-5 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
               <h3 className="text-lg font-bold text-slate-950">
                 Ingen nye forespørsler
               </h3>
@@ -396,7 +397,7 @@ export default function AdminPage() {
 
         <section className="flex flex-col gap-3">
           <button
-            className="flex h-14 items-center justify-between rounded-3xl bg-white px-5 text-left text-xl font-bold text-slate-950 shadow-sm ring-1 ring-slate-200"
+            className="flex h-14 items-center justify-between rounded-[28px] bg-white px-5 text-left text-xl font-black text-[#07122F] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]"
             onClick={() => setIsProcessedOpen((current) => !current)}
             type="button"
           >
@@ -420,12 +421,13 @@ export default function AdminPage() {
                 />
               ))
             ) : (
-              <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+              <p className="rounded-[28px] bg-white p-5 text-base font-semibold text-[#53657D] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
                 Ingen behandlede forespørsler ennå.
               </p>
             )
           ) : null}
         </section>
+        <HomeLandscapeFooter />
       </section>
     </AppShell>
   );
@@ -447,7 +449,7 @@ function AdminRequestCard({
   showActions: boolean;
 }) {
   return (
-    <article className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <article className="flex flex-col gap-4 rounded-[28px] bg-white p-5 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -455,7 +457,7 @@ function AdminRequestCard({
               {request.resources?.name ?? "Velhuset"}
             </h3>
             {request.booking_types ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
                 {request.booking_types.name}
               </span>
             ) : null}
@@ -466,7 +468,7 @@ function AdminRequestCard({
           </p>
         </div>
         <span
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ring-1 ${getStatusBadgeClass(
+          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${getStatusBadgeClass(
             request.status,
           )}`}
         >
@@ -474,7 +476,7 @@ function AdminRequestCard({
         </span>
       </div>
 
-      <div className="grid gap-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+      <div className="grid gap-2 rounded-[18px] bg-slate-50 p-3 text-sm font-medium text-[#53657D]">
         <p>
           <span className="font-bold text-slate-950">Navn:</span>{" "}
           {request.guest_name}
@@ -500,7 +502,7 @@ function AdminRequestCard({
           <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
             Kommentar til bruker
             <textarea
-              className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+              className="min-h-28 rounded-[18px] border border-[#DDE8F5] px-4 py-3 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
               disabled={isUpdating}
               onChange={(event) => onCommentChange(event.target.value)}
               placeholder="F.eks. Godkjent. Husk vask etter bruk."
@@ -510,7 +512,7 @@ function AdminRequestCard({
 
           <div className="grid grid-cols-2 gap-3">
             <button
-              className="h-12 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/20 disabled:opacity-60"
+              className="h-12 rounded-[18px] bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/20 disabled:opacity-60"
               disabled={isUpdating}
               onClick={() => onUpdate(request, "approved")}
               type="button"
@@ -518,7 +520,7 @@ function AdminRequestCard({
               {isUpdating ? "Behandler..." : "Godkjenn"}
             </button>
             <button
-              className="h-12 rounded-2xl bg-red-50 px-5 text-base font-bold text-red-700 ring-1 ring-red-100 disabled:opacity-60"
+              className="h-12 rounded-[18px] bg-red-50 px-5 text-base font-bold text-red-700 ring-1 ring-red-100 disabled:opacity-60"
               disabled={isUpdating}
               onClick={() => onUpdate(request, "rejected")}
               type="button"
@@ -528,7 +530,7 @@ function AdminRequestCard({
           </div>
         </>
       ) : request.admin_comment ? (
-        <div className="rounded-2xl bg-blue-50 p-3 text-sm font-medium text-blue-900 ring-1 ring-blue-100">
+        <div className="rounded-[18px] bg-blue-50 p-3 text-sm font-medium text-blue-900 ring-1 ring-blue-100">
           <p className="font-bold">Melding til bruker</p>
           <p className="mt-1">{request.admin_comment}</p>
         </div>

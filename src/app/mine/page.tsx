@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
 import { getBookingStatusLabel } from "@/lib/booking-status";
 import { getDeviceToken } from "@/lib/device-token";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -352,22 +353,24 @@ export default function MyBookingsPage() {
 
   return (
     <AppShell active="mine">
-      <section className="flex flex-col gap-6">
+      <section className="flex flex-col gap-5">
         <header>
-          <p className="text-sm font-semibold text-blue-700">Oversikt</p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+          <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-700">
+            Oversikt
+          </p>
+          <h1 className="mt-1 text-[32px] font-black tracking-[-0.04em] text-[#07122F]">
             Mine bookinger
           </h1>
         </header>
 
         {message ? (
-          <p className="rounded-3xl bg-white p-4 text-base font-bold text-slate-950 shadow-sm ring-1 ring-slate-200">
+          <p className="rounded-[28px] bg-white p-4 text-base font-bold text-[#07122F] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
             {message}
           </p>
         ) : null}
 
         {errorMessage ? (
-          <p className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
+          <p className="rounded-[28px] bg-white p-4 text-base text-[#53657D] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
             {errorMessage}
           </p>
         ) : null}
@@ -379,20 +382,20 @@ export default function MyBookingsPage() {
         ) : null}
 
         {!isLoading && bookings.length === 0 ? (
-          <div className="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="flex flex-col gap-6 rounded-[30px] bg-white p-5 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
             <p className="text-lg font-medium text-slate-700">
               Ingen bookinger på denne enheten.
             </p>
 
             <div className="grid gap-3">
               <Link
-                className="flex h-14 items-center justify-center rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25"
+                className="flex h-14 items-center justify-center rounded-[18px] bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25"
                 href="/r/tennisbane"
               >
                 Book tennisbane
               </Link>
               <Link
-                className="flex h-14 items-center justify-center rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
+                className="flex h-14 items-center justify-center rounded-[18px] bg-white px-5 text-base font-bold text-blue-700 ring-1 ring-blue-200"
                 href="/velhuset"
               >
                 Lei velhuset
@@ -404,7 +407,7 @@ export default function MyBookingsPage() {
         {!isLoading && bookings.length > 0 ? (
           <>
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-slate-950">
+              <h2 className="text-xl font-black text-[#07122F]">
                 Aktive bookinger
               </h2>
               {activeBookings.length > 0 ? (
@@ -417,14 +420,14 @@ export default function MyBookingsPage() {
                   />
                 ))
               ) : (
-                <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                <p className="rounded-[28px] bg-white p-5 text-base font-semibold text-[#53657D] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
                   Du har ingen aktive bookinger.
                 </p>
               )}
             </section>
 
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-slate-950">
+              <h2 className="text-xl font-black text-[#07122F]">
                 Forespørsler
               </h2>
               {requestBookings.length > 0 ? (
@@ -437,7 +440,7 @@ export default function MyBookingsPage() {
                   />
                 ))
               ) : (
-                <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                <p className="rounded-[28px] bg-white p-5 text-base font-semibold text-[#53657D] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
                   Du har ingen aktive forespørsler.
                 </p>
               )}
@@ -445,7 +448,7 @@ export default function MyBookingsPage() {
 
             <section className="flex flex-col gap-3">
               <button
-                className="flex h-14 items-center justify-between rounded-3xl bg-white px-5 text-left text-xl font-bold text-slate-950 shadow-sm ring-1 ring-slate-200"
+                className="flex h-14 items-center justify-between rounded-[28px] bg-white px-5 text-left text-xl font-black text-[#07122F] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]"
                 onClick={() => setIsHistoryOpen((current) => !current)}
                 type="button"
               >
@@ -467,7 +470,7 @@ export default function MyBookingsPage() {
                     />
                   ))
                 ) : (
-                  <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                  <p className="rounded-[28px] bg-white p-5 text-base font-semibold text-[#53657D] shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
                     Ingen historikk ennå.
                   </p>
                 )
@@ -475,6 +478,7 @@ export default function MyBookingsPage() {
             </section>
           </>
         ) : null}
+        <HomeLandscapeFooter />
       </section>
     </AppShell>
   );
@@ -496,23 +500,23 @@ function BookingCard({
   const isRejected = booking.status === "rejected";
 
   return (
-    <article className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <article className="flex flex-col gap-4 rounded-[28px] bg-white p-4 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
       <div className="flex gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
           <ResourceIcon slug={booking.resources?.slug} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-bold leading-tight text-slate-950">
+            <h3 className="text-lg font-black leading-tight text-[#07122F]">
               {resourceName}
             </h3>
             {booking.booking_types ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
                 {booking.booking_types.name}
               </span>
             ) : null}
           </div>
-          <div className="mt-2 grid gap-1.5 text-sm font-medium text-slate-600">
+          <div className="mt-2 grid gap-1.5 text-sm font-semibold text-[#53657D]">
             <p className="flex items-center gap-2">
               <SmallIcon name="calendar" />
               {formatDate(booking.start_time)}
@@ -523,14 +527,14 @@ function BookingCard({
             </p>
           </div>
           <p
-            className={`mt-3 inline-flex w-fit rounded-full px-3 py-1 text-sm font-bold ring-1 ${getStatusBadgeClass(
+            className={`mt-3 inline-flex w-fit rounded-full px-3 py-1.5 text-sm font-bold ring-1 ${getStatusBadgeClass(
               booking.status,
             )}`}
           >
             Status: {getBookingStatusLabel(booking.status)}
           </p>
           {isRequested ? (
-            <p className="mt-2 text-sm font-semibold text-slate-500">
+            <p className="mt-2 text-sm font-semibold text-[#53657D]">
               Venter på godkjenning
             </p>
           ) : null}
@@ -539,13 +543,13 @@ function BookingCard({
 
       <div>
         {booking.purpose ? (
-          <p className="rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+          <p className="rounded-[18px] bg-slate-50 p-3 text-sm font-medium text-[#53657D]">
             Formål: {booking.purpose}
           </p>
         ) : null}
         {booking.admin_comment ? (
           <div
-            className={`mt-2 rounded-2xl p-3 text-sm font-medium ring-1 ${
+            className={`mt-2 rounded-[18px] p-3 text-sm font-medium ring-1 ${
               isRejected
                 ? "bg-red-50 text-red-900 ring-red-100"
                 : "bg-blue-50 text-blue-900 ring-blue-100"
@@ -559,7 +563,7 @@ function BookingCard({
 
       {allowCancel && canCancelBooking(booking.status) ? (
         <button
-          className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
+          className="h-12 rounded-[18px] bg-white px-5 text-base font-bold text-blue-700 ring-1 ring-blue-200 disabled:opacity-60"
           disabled={cancellingId === booking.id}
           onClick={() => onCancel(booking)}
           type="button"
