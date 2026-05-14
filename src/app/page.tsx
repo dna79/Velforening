@@ -8,9 +8,9 @@ import { WeatherCard } from "@/components/weather-card";
 export default function Home() {
   return (
     <AppShell active="home">
-      <section className="flex flex-col gap-4">
-        <header className="px-1">
-          <p className="max-w-[19rem] text-[24px] font-black leading-tight tracking-[-0.03em] text-[#07122F]">
+      <section className="flex flex-col gap-3.5">
+        <header className="px-1 pb-0.5">
+          <p className="max-w-[18rem] text-[20px] font-extrabold leading-snug tracking-[-0.02em] text-[#07122F]">
             Book tennisbanen, lei velhuset og følg dine bookinger.
           </p>
         </header>
@@ -28,7 +28,6 @@ export default function Home() {
             description="Send forespørsel om leie"
             href="/velhuset"
             illustration={<HouseIllustration />}
-            subtitle="Dag, kveld eller hel dag"
             title="Velhuset"
           />
         </div>
