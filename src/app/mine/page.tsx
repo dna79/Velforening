@@ -11,6 +11,7 @@ import { createSupabaseClient } from "@/lib/supabase";
 type MyBooking = {
   admin_comment: string | null;
   booking_type_id: string | null;
+  cancelled_at: string | null;
   created_at: string | null;
   guest_email: string | null;
   guest_name: string;
@@ -31,13 +32,6 @@ type MyBooking = {
   } | null;
 };
 
-type CancelErrorDetails = {
-  code?: string;
-  details?: string;
-  hint?: string;
-  message?: string;
-};
-
 const visibleBookingStatuses = [
   "requested",
   "approved",
@@ -52,6 +46,18 @@ function canCancelBooking(status: string) {
 
 function getCancelButtonLabel(status: string) {
   return status === "requested" ? "Angre forespørsel" : "Kanseller booking";
+}
+
+function getStatusBadgeClass(status: string) {
+  if (status === "rejected") {
+    return "bg-red-50 text-red-700 ring-red-100";
+  }
+
+  if (status === "cancelled") {
+    return "bg-slate-100 text-slate-600 ring-slate-200";
+  }
+
+  return "bg-blue-50 text-blue-700 ring-blue-100";
 }
 
 function formatDate(value: string) {
@@ -73,8 +79,6 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<MyBooking[]>([]);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [cancelErrorDetails, setCancelErrorDetails] =
-    useState<CancelErrorDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -113,6 +117,7 @@ export default function MyBookingsPage() {
           guest_phone,
           guest_email,
           purpose,
+          cancelled_at,
           resource_id,
           booking_type_id,
           resources (
@@ -236,8 +241,11 @@ export default function MyBookingsPage() {
   }, []);
 
   async function cancelBooking(booking: MyBooking) {
+    const isRequest = booking.status === "requested";
     const confirmed = window.confirm(
-      "Er du sikker på at du vil kansellere denne?",
+      isRequest
+        ? "Er du sikker på at du vil angre forespørselen?"
+        : "Er du sikker på at du vil kansellere denne?",
     );
 
     if (!confirmed) {
@@ -247,7 +255,6 @@ export default function MyBookingsPage() {
     setCancellingId(booking.id);
     setMessage("");
     setErrorMessage("");
-    setCancelErrorDetails(null);
 
     const deviceToken = getDeviceToken();
 
@@ -275,22 +282,22 @@ export default function MyBookingsPage() {
         "code:",
         error?.code,
       );
-      setCancelErrorDetails({
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        message: error?.message,
-      });
       setErrorMessage("Kunne ikke avbestille bookingen.");
     } else {
       setBookings((currentBookings) =>
         currentBookings.map((currentBooking) =>
           currentBooking.id === booking.id
-            ? { ...currentBooking, status: "cancelled" }
+            ? {
+                ...currentBooking,
+                cancelled_at: new Date().toISOString(),
+                status: "cancelled",
+              }
             : currentBooking,
         ),
       );
-      setMessage("Bookingen er kansellert.");
+      setMessage(
+        isRequest ? "Forespørselen er kansellert." : "Bookingen er kansellert.",
+      );
     }
 
     setCancellingId(null);
@@ -327,9 +334,20 @@ export default function MyBookingsPage() {
           new Date(booking.end_time).getTime() < currentTime),
     )
     .sort(
-      (firstBooking, secondBooking) =>
-        new Date(secondBooking.end_time).getTime() -
-        new Date(firstBooking.end_time).getTime(),
+      (firstBooking, secondBooking) => {
+        const firstTime = new Date(
+          firstBooking.cancelled_at ??
+            firstBooking.created_at ??
+            firstBooking.end_time,
+        ).getTime();
+        const secondTime = new Date(
+          secondBooking.cancelled_at ??
+            secondBooking.created_at ??
+            secondBooking.end_time,
+        ).getTime();
+
+        return secondTime - firstTime;
+      },
     );
 
   return (
@@ -349,19 +367,9 @@ export default function MyBookingsPage() {
         ) : null}
 
         {errorMessage ? (
-          <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
-            <p>{errorMessage}</p>
-
-            {process.env.NODE_ENV === "development" && cancelErrorDetails ? (
-              <div className="mt-4 rounded-2xl bg-slate-100 p-3 text-sm text-slate-800">
-                <p className="font-semibold">Utviklingsdetaljer</p>
-                <p>Melding: {cancelErrorDetails.message ?? "(tom)"}</p>
-                <p>Detaljer: {cancelErrorDetails.details ?? "(tom)"}</p>
-                <p>Hint: {cancelErrorDetails.hint ?? "(tom)"}</p>
-                <p>Kode: {cancelErrorDetails.code ?? "(tom)"}</p>
-              </div>
-            ) : null}
-          </div>
+          <p className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
+            {errorMessage}
+          </p>
         ) : null}
 
         {isLoading ? (
@@ -410,7 +418,7 @@ export default function MyBookingsPage() {
                 ))
               ) : (
                 <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
-                  Ingen aktive bookinger.
+                  Du har ingen aktive bookinger.
                 </p>
               )}
             </section>
@@ -430,7 +438,7 @@ export default function MyBookingsPage() {
                 ))
               ) : (
                 <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
-                  Ingen forespørsler.
+                  Du har ingen aktive forespørsler.
                 </p>
               )}
             </section>
@@ -441,9 +449,9 @@ export default function MyBookingsPage() {
                 onClick={() => setIsHistoryOpen((current) => !current)}
                 type="button"
               >
-                Historikk ({historyBookings.length})
-                <span className="text-2xl leading-none">
-                  {isHistoryOpen ? "−" : "+"}
+                <span>Historikk ({historyBookings.length})</span>
+                <span className="text-sm font-bold text-blue-700">
+                  {isHistoryOpen ? "Skjul historikk" : "Vis historikk"}
                 </span>
               </button>
 
@@ -483,33 +491,66 @@ function BookingCard({
   cancellingId: string | null;
   onCancel: (booking: MyBooking) => void;
 }) {
+  const resourceName = booking.resources?.name ?? "Booking";
+  const isRequested = booking.status === "requested";
+  const isRejected = booking.status === "rejected";
+
   return (
-    <article className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-xl font-bold text-slate-950">
-          Ressurs: {booking.resources?.name ?? "Booking"}
-        </h3>
-        {booking.booking_types ? (
-          <p className="text-sm font-bold text-blue-700">
-            Bookingtype: {booking.booking_types.name}
+    <article className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <div className="flex gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <ResourceIcon slug={booking.resources?.slug} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-bold leading-tight text-slate-950">
+              {resourceName}
+            </h3>
+            {booking.booking_types ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                {booking.booking_types.name}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-2 grid gap-1.5 text-sm font-medium text-slate-600">
+            <p className="flex items-center gap-2">
+              <SmallIcon name="calendar" />
+              {formatDate(booking.start_time)}
+            </p>
+            <p className="flex items-center gap-2">
+              <SmallIcon name="clock" />
+              {formatTime(booking.start_time)}-{formatTime(booking.end_time)}
+            </p>
+          </div>
+          <p
+            className={`mt-3 inline-flex w-fit rounded-full px-3 py-1 text-sm font-bold ring-1 ${getStatusBadgeClass(
+              booking.status,
+            )}`}
+          >
+            Status: {getBookingStatusLabel(booking.status)}
           </p>
-        ) : null}
-        <p className="text-base font-medium text-slate-600">
-          Dato: {formatDate(booking.start_time)}
-        </p>
-        <p className="text-base font-medium text-slate-600">
-          Tid: {formatTime(booking.start_time)}-{formatTime(booking.end_time)}
-        </p>
-        <p className="mt-2 inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
-          Status: {getBookingStatusLabel(booking.status)}
-        </p>
+          {isRequested ? (
+            <p className="mt-2 text-sm font-semibold text-slate-500">
+              Venter på godkjenning
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div>
         {booking.purpose ? (
-          <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+          <p className="rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
             Formål: {booking.purpose}
           </p>
         ) : null}
         {booking.admin_comment ? (
-          <div className="mt-2 rounded-2xl bg-blue-50 p-3 text-sm font-medium text-blue-900 ring-1 ring-blue-100">
+          <div
+            className={`mt-2 rounded-2xl p-3 text-sm font-medium ring-1 ${
+              isRejected
+                ? "bg-red-50 text-red-900 ring-red-100"
+                : "bg-blue-50 text-blue-900 ring-blue-100"
+            }`}
+          >
             <p className="font-bold">Melding fra styret</p>
             <p className="mt-1">{booking.admin_comment}</p>
           </div>
@@ -529,5 +570,77 @@ function BookingCard({
         </button>
       ) : null}
     </article>
+  );
+}
+
+function ResourceIcon({ slug }: { slug?: string }) {
+  if (slug === "velhuset") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 11 12 4l9 7" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <ellipse cx="9" cy="8" rx="4" ry="6" transform="rotate(24 9 8)" />
+      <path d="m12 13 7 7" />
+      <circle cx="17" cy="7" r="3" />
+    </svg>
+  );
+}
+
+function SmallIcon({ name }: { name: "calendar" | "clock" }) {
+  const paths = {
+    calendar: (
+      <>
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <rect height="18" rx="2" width="18" x="3" y="4" />
+        <path d="M3 10h18" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4 text-blue-600"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      {paths[name]}
+    </svg>
   );
 }
