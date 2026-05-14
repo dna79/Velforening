@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
-import { getBookingStatusLabel } from "@/lib/booking-status";
+import { StatusBadge } from "@/components/ui";
 import { createSupabaseClient } from "@/lib/supabase";
 
 type AdminRequest = {
@@ -46,18 +46,6 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function getStatusBadgeClass(status: string) {
-  if (status === "rejected") {
-    return "bg-red-50 text-red-700 ring-red-100";
-  }
-
-  if (status === "approved") {
-    return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-  }
-
-  return "bg-blue-50 text-blue-700 ring-blue-100";
 }
 
 function logSupabaseError(label: string, error: {
@@ -467,13 +455,7 @@ function AdminRequestCard({
             -{formatTime(request.end_time)}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${getStatusBadgeClass(
-            request.status,
-          )}`}
-        >
-          {getBookingStatusLabel(request.status)}
-        </span>
+        <StatusBadge status={request.status} />
       </div>
 
       <div className="grid gap-2 rounded-[18px] bg-slate-50 p-3 text-sm font-medium text-[#53657D]">

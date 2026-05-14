@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
-import { getBookingStatusLabel } from "@/lib/booking-status";
+import { StatusBadge } from "@/components/ui";
 import { getDeviceToken } from "@/lib/device-token";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -47,18 +47,6 @@ function canCancelBooking(status: string) {
 
 function getCancelButtonLabel(status: string) {
   return status === "requested" ? "Angre forespørsel" : "Kanseller booking";
-}
-
-function getStatusBadgeClass(status: string) {
-  if (status === "rejected") {
-    return "bg-red-50 text-red-700 ring-red-100";
-  }
-
-  if (status === "cancelled") {
-    return "bg-slate-100 text-slate-600 ring-slate-200";
-  }
-
-  return "bg-blue-50 text-blue-700 ring-blue-100";
 }
 
 function formatDate(value: string) {
@@ -526,13 +514,9 @@ function BookingCard({
               {formatTime(booking.start_time)}-{formatTime(booking.end_time)}
             </p>
           </div>
-          <p
-            className={`mt-3 inline-flex w-fit rounded-full px-3 py-1.5 text-sm font-bold ring-1 ${getStatusBadgeClass(
-              booking.status,
-            )}`}
-          >
-            Status: {getBookingStatusLabel(booking.status)}
-          </p>
+          <div className="mt-3">
+            <StatusBadge status={booking.status} />
+          </div>
           {isRequested ? (
             <p className="mt-2 text-sm font-semibold text-[#53657D]">
               Venter på godkjenning

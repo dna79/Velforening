@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
+import {
+  MessageBox,
+  inputClassName,
+  primaryButtonClassName,
+} from "@/components/ui";
 import { getOrCreateDeviceToken } from "@/lib/device-token";
 import { createSupabaseClient } from "@/lib/supabase";
 import type { Resource } from "@/lib/types";
@@ -353,30 +359,28 @@ export default function VelhusetPage() {
   return (
     <AppShell active="home" headerBackHref="/">
       <section className="flex flex-col gap-4">
-        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <p className="text-sm font-bold text-blue-700">Utleie</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+        <header>
+          <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-700">Utleie</p>
+          <h1 className="mt-1 text-[32px] font-black tracking-[-0.04em] text-[#07122F]">
             Velhuset
           </h1>
-          <p className="mt-2 text-base font-medium text-slate-600">
+          <p className="mt-2 text-base font-semibold text-[#53657D]">
             Send forespørsel om leie. Styret godkjenner før bookingen er endelig.
           </p>
-        </div>
+        </header>
 
         {message ? (
-          <p className="rounded-3xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800 ring-1 ring-emerald-200">
-            {message}
-          </p>
+          <MessageBox tone="success">{message}</MessageBox>
         ) : null}
 
         {errorMessage ? (
-          <p className="whitespace-pre-wrap rounded-3xl bg-red-50 p-4 text-sm font-bold text-red-700 ring-1 ring-red-100">
-            {errorMessage}
-          </p>
+          <MessageBox tone="error">
+            <span className="whitespace-pre-wrap">{errorMessage}</span>
+          </MessageBox>
         ) : null}
 
         <form
-          className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+          className="flex flex-col gap-4 rounded-[28px] bg-white p-5 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]"
           onSubmit={submitRequest}
         >
           <CalendarCard
@@ -396,7 +400,7 @@ export default function VelhusetPage() {
             </p>
             <div className="grid gap-2">
               {!isLoading && bookingTypes.length === 0 ? (
-                <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-600">
+                <p className="rounded-[18px] bg-slate-50 p-4 text-sm font-bold text-[#53657D]">
                   Ingen bookingtyper er konfigurert for Velhuset.
                 </p>
               ) : null}
@@ -406,10 +410,10 @@ export default function VelhusetPage() {
 
                 return (
                   <button
-                    className={`flex min-h-14 items-center justify-between rounded-2xl px-4 text-left text-sm font-bold ring-1 ${
+                    className={`flex min-h-14 items-center justify-between rounded-[18px] px-4 text-left text-sm font-bold ring-1 ${
                       isSelected
                         ? "bg-blue-600 text-white ring-blue-600"
-                        : "bg-white text-slate-800 ring-slate-200"
+                        : "bg-white text-slate-800 ring-[#DDE8F5]"
                     }`}
                     disabled={isLoading}
                     key={bookingType.id}
@@ -427,7 +431,7 @@ export default function VelhusetPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-blue-50 p-3 text-sm font-bold text-blue-800">
+          <div className="rounded-[18px] bg-blue-50 p-3 text-sm font-bold text-blue-800">
             {selectedType
               ? `${formatDate(selectedDate)} kl. ${selectedType.start_time.slice(0, 5)}-${selectedType.end_time.slice(0, 5)}`
               : "Velg bookingtype"}
@@ -436,7 +440,7 @@ export default function VelhusetPage() {
           <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
             Navn
             <input
-              className="h-14 rounded-2xl border border-slate-200 px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className={`h-14 ${inputClassName}`}
               onChange={(event) => setGuestName(event.target.value)}
               required
               type="text"
@@ -447,7 +451,7 @@ export default function VelhusetPage() {
           <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
             Telefon
             <input
-              className="h-14 rounded-2xl border border-slate-200 px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className={`h-14 ${inputClassName}`}
               inputMode="tel"
               onChange={(event) => setGuestPhone(event.target.value)}
               required
@@ -459,7 +463,7 @@ export default function VelhusetPage() {
           <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
             E-post
             <input
-              className="h-14 rounded-2xl border border-slate-200 px-4 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className={`h-14 ${inputClassName}`}
               onChange={(event) => setGuestEmail(event.target.value)}
               required
               type="email"
@@ -470,7 +474,7 @@ export default function VelhusetPage() {
           <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
             Formål
             <textarea
-              className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-base font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className={`min-h-28 py-3 ${inputClassName}`}
               onChange={(event) => setPurpose(event.target.value)}
               required
               value={purpose}
@@ -478,13 +482,14 @@ export default function VelhusetPage() {
           </label>
 
           <button
-            className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 disabled:opacity-60"
+            className={`h-14 text-base ${primaryButtonClassName}`}
             disabled={isLoading || isSubmitting || !resource || !selectedType}
             type="submit"
           >
             {isSubmitting ? "Sender..." : "Send leieforespørsel"}
           </button>
         </form>
+        <HomeLandscapeFooter />
       </section>
     </AppShell>
   );
@@ -505,11 +510,11 @@ function CalendarCard({
   const weekdays = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
 
   return (
-    <section className="rounded-3xl bg-white p-3 ring-1 ring-slate-200">
+    <section className="rounded-[24px] bg-white p-3 ring-1 ring-[#DDE8F5]">
       <div className="flex items-center justify-between gap-3 px-1">
         <button
           aria-label="Forrige måned"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-700"
           onClick={() => onMonthChange(shiftMonth(calendarMonth, -1))}
           type="button"
         >
@@ -520,7 +525,7 @@ function CalendarCard({
         </h2>
         <button
           aria-label="Neste måned"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-700"
           onClick={() => onMonthChange(shiftMonth(calendarMonth, 1))}
           type="button"
         >

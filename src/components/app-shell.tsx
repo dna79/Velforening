@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 type AppShellProps = {
@@ -45,6 +46,7 @@ export function LogoFallback() {
 
 export function AppHeader({ backHref }: { backHref?: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-20 flex min-h-[78px] items-center justify-between bg-[#F4F8FC]/95 px-6 pb-[18px] pt-6 backdrop-blur">
@@ -85,16 +87,25 @@ export function AppHeader({ backHref }: { backHref?: string }) {
 
         {isMenuOpen ? (
           <nav className="absolute right-0 top-14 w-56 overflow-hidden rounded-[28px] bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-[#DDE8F5]">
-            {menuItems.map((item) => (
-              <Link
-                className="block rounded-[18px] px-4 py-3 text-sm font-bold text-[#53657D] hover:bg-blue-50 hover:text-blue-700"
-                href={item.href}
-                key={item.href}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {menuItems.map((item) => {
+              const isActive =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  className={`block rounded-[18px] px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-700 ${
+                    isActive ? "bg-blue-50 text-blue-700" : "text-[#53657D]"
+                  }`}
+                  href={item.href}
+                  key={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         ) : null}
       </div>

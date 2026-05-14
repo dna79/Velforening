@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { HomeLandscapeFooter } from "@/components/HomeLandscapeFooter";
+import {
+  Card,
+  MessageBox,
+  inputClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+} from "@/components/ui";
 import { getOrCreateDeviceToken } from "@/lib/device-token";
 import { createSupabaseClient } from "@/lib/supabase";
 import type { Booking, BlockedTime, Resource } from "@/lib/types";
@@ -445,7 +453,16 @@ export default function BookingPage({ params }: BookingPageProps) {
 
   return (
     <AppShell active="home" headerBackHref="/">
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
+        <header>
+          <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-700">
+            Booking
+          </p>
+          <h1 className="mt-1 text-[32px] font-black tracking-[-0.04em] text-[#07122F]">
+            {resource?.name ?? "Tennisbane"}
+          </h1>
+        </header>
+
         <StepIndicator hasSelectedTime={Boolean(selectedSlot)} />
 
         <CalendarCard
@@ -462,7 +479,7 @@ export default function BookingPage({ params }: BookingPageProps) {
         />
 
         {errorMessage ? (
-          <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
+          <Card className="p-4 text-base text-[#53657D]">
             <p>{errorMessage}</p>
 
             {process.env.NODE_ENV === "development" && developmentError ? (
@@ -475,22 +492,22 @@ export default function BookingPage({ params }: BookingPageProps) {
                 ) : null}
               </div>
             ) : null}
-          </div>
+          </Card>
         ) : null}
 
         {confirmationMessage ? (
-          <div className="rounded-3xl bg-white p-4 text-base text-slate-700 shadow-sm ring-1 ring-slate-200">
+          <Card className="p-4 text-base text-[#53657D]">
             <p className="font-bold text-slate-950">{confirmationMessage}</p>
             <Link
-              className="mt-4 flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-5 text-base font-bold text-white"
+              className={`mt-4 flex h-12 items-center justify-center text-base ${primaryButtonClassName}`}
               href="/mine"
             >
               Mine bookinger
             </Link>
-          </div>
+          </Card>
         ) : null}
 
-        <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+        <Card className="p-4">
           <div className="mb-3 flex items-end justify-between gap-3 px-1">
             <div>
               <h2 className="text-sm font-bold text-slate-950">
@@ -508,7 +525,7 @@ export default function BookingPage({ params }: BookingPageProps) {
           </div>
 
           {visibleTimeSlots.length === 0 && selectedDate === formatDate(0) ? (
-            <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+            <p className="rounded-[18px] bg-slate-50 p-4 text-sm font-semibold text-[#53657D]">
               Ingen flere ledige tider i dag. Velg i morgen.
             </p>
           ) : null}
@@ -529,7 +546,7 @@ export default function BookingPage({ params }: BookingPageProps) {
 
                       return (
                         <button
-                          className={`flex min-h-[72px] flex-col justify-between rounded-2xl p-3 text-left shadow-sm ring-1 transition-colors ${
+                          className={`flex min-h-[72px] flex-col justify-between rounded-[18px] p-3 text-left shadow-sm ring-1 transition-colors ${
                             isUnavailable
                               ? "bg-slate-100 text-slate-400 ring-slate-200"
                               : isSelected
@@ -605,7 +622,8 @@ export default function BookingPage({ params }: BookingPageProps) {
               );
             })}
           </div>
-        </section>
+        </Card>
+        <HomeLandscapeFooter />
       </section>
     </AppShell>
   );
@@ -616,7 +634,7 @@ function StepIndicator({ hasSelectedTime }: { hasSelectedTime: boolean }) {
   const steps = ["1. Velg dato", "2. Velg tid", "3. Bekreft"];
 
   return (
-    <div className="h-11 rounded-2xl bg-white px-2 shadow-sm ring-1 ring-slate-200">
+    <div className="h-11 rounded-[22px] bg-white px-2 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]">
       <div className="grid h-full grid-cols-3 gap-1">
         {steps.map((step, index) => {
           const number = index + 1;
@@ -664,11 +682,11 @@ function CalendarCard({
   const weekdays = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
 
   return (
-    <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+    <Card className="p-3">
       <div className="flex items-center justify-between gap-3 px-1">
         <button
           aria-label="Forrige måned"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-700"
           onClick={() => onMonthChange(shiftMonth(calendarMonth, -1))}
           type="button"
         >
@@ -679,7 +697,7 @@ function CalendarCard({
         </h2>
         <button
           aria-label="Neste måned"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-700"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-xl font-bold text-blue-700"
           onClick={() => onMonthChange(shiftMonth(calendarMonth, 1))}
           type="button"
         >
@@ -717,7 +735,7 @@ function CalendarCard({
           );
         })}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -750,7 +768,7 @@ function BookingConfirmation({
 }) {
   return (
     <form
-      className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-lg shadow-blue-950/10 ring-1 ring-blue-100"
+      className="flex flex-col gap-4 rounded-[28px] bg-white p-4 shadow-[0_10px_28px_rgba(15,35,70,0.08)] ring-1 ring-[#DDE8F5]"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
@@ -773,7 +791,7 @@ function BookingConfirmation({
       <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
         Navn
         <input
-          className="h-14 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          className={`h-14 ${inputClassName}`}
           name="name"
           onChange={(event) => onGuestNameChange(event.target.value)}
           required
@@ -785,7 +803,7 @@ function BookingConfirmation({
       <label className="flex flex-col gap-2 text-sm font-bold text-slate-800">
         Mobilnummer
         <input
-          className="h-14 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          className={`h-14 ${inputClassName}`}
           inputMode="tel"
           name="phone"
           onChange={(event) => onGuestPhoneChange(event.target.value)}
@@ -796,13 +814,13 @@ function BookingConfirmation({
       </label>
 
       {submissionError ? (
-        <p className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+        <MessageBox tone="error">
           {submissionError}
-        </p>
+        </MessageBox>
       ) : null}
 
       <button
-        className="h-14 rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-lg shadow-blue-600/25 disabled:opacity-60"
+        className={`h-14 text-base ${primaryButtonClassName}`}
         disabled={isBooking}
         type="submit"
       >
@@ -810,7 +828,7 @@ function BookingConfirmation({
       </button>
 
       <button
-        className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300"
+        className={`h-12 text-base ${secondaryButtonClassName}`}
         onClick={onCancel}
         type="button"
       >
