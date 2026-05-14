@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import { AppQrPanel } from "@/components/app-qr-code";
+
 type AppShellProps = {
   active?: "home" | "mine" | "alerts" | "more";
   children: ReactNode;
@@ -46,6 +48,7 @@ export function LogoFallback() {
 
 export function AppHeader({ backHref }: { backHref?: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -106,8 +109,22 @@ export function AppHeader({ backHref }: { backHref?: string }) {
                 </Link>
               );
             })}
+            <button
+              className="mt-1 flex w-full items-center justify-between rounded-[18px] px-4 py-3 text-left text-sm font-bold text-blue-700 hover:bg-blue-50"
+              onClick={() => {
+                setIsQrOpen(true);
+                setIsMenuOpen(false);
+              }}
+              type="button"
+            >
+              QR-kode til appen
+              <span aria-hidden="true" className="text-lg leading-none">
+                ›
+              </span>
+            </button>
           </nav>
         ) : null}
+        {isQrOpen ? <AppQrPanel onClose={() => setIsQrOpen(false)} /> : null}
       </div>
     </header>
   );
