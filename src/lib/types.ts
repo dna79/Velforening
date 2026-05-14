@@ -89,7 +89,7 @@ export type Database = {
       };
       update_booking_request: {
         Args: {
-          p_admin_comment: string;
+          p_admin_comment: string | null;
           p_booking_id: string;
           p_status: string;
         };
