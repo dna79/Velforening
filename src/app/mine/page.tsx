@@ -11,6 +11,7 @@ import { createSupabaseClient } from "@/lib/supabase";
 type MyBooking = {
   admin_comment: string | null;
   booking_type_id: string | null;
+  created_at: string | null;
   guest_email: string | null;
   guest_name: string;
   guest_phone: string;
@@ -45,14 +46,6 @@ const visibleBookingStatuses = [
   "cancelled",
 ];
 
-const statusHelpTexts: Record<string, string> = {
-  requested: "Venter på godkjenning fra styret.",
-  approved: "Bookingen er godkjent.",
-  rejected: "Forespørselen ble avslått.",
-  confirmed: "Bookingen er bekreftet.",
-  cancelled: "Bookingen er kansellert.",
-};
-
 function canCancelBooking(status: string) {
   return ["requested", "approved", "confirmed"].includes(status);
 }
@@ -83,14 +76,20 @@ export default function MyBookingsPage() {
   const [cancelErrorDetails, setCancelErrorDetails] =
     useState<CancelErrorDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
+    const currentTimeTimeoutId = window.setTimeout(() => {
+      setCurrentTime(Date.now());
+    }, 0);
+
     const deviceToken = getDeviceToken();
 
     if (!deviceToken) {
       window.setTimeout(() => setIsLoading(false), 0);
-      return;
+      return () => window.clearTimeout(currentTimeTimeoutId);
     }
 
     const currentDeviceToken = deviceToken;
@@ -105,6 +104,7 @@ export default function MyBookingsPage() {
         .from("bookings")
         .select(`
           id,
+          created_at,
           start_time,
           end_time,
           status,
@@ -231,6 +231,7 @@ export default function MyBookingsPage() {
 
     return () => {
       isActive = false;
+      window.clearTimeout(currentTimeTimeoutId);
     };
   }, []);
 
@@ -295,6 +296,42 @@ export default function MyBookingsPage() {
     setCancellingId(null);
   }
 
+  const activeBookings = bookings
+    .filter(
+      (booking) =>
+        ["approved", "confirmed"].includes(booking.status) &&
+        new Date(booking.end_time).getTime() >= currentTime,
+    )
+    .sort(
+      (firstBooking, secondBooking) =>
+        new Date(firstBooking.start_time).getTime() -
+        new Date(secondBooking.start_time).getTime(),
+    );
+  const requestBookings = bookings
+    .filter((booking) => ["requested", "rejected"].includes(booking.status))
+    .sort((firstBooking, secondBooking) => {
+      const firstTime = new Date(
+        firstBooking.created_at ?? firstBooking.start_time,
+      ).getTime();
+      const secondTime = new Date(
+        secondBooking.created_at ?? secondBooking.start_time,
+      ).getTime();
+
+      return secondTime - firstTime;
+    });
+  const historyBookings = bookings
+    .filter(
+      (booking) =>
+        booking.status === "cancelled" ||
+        (["approved", "confirmed"].includes(booking.status) &&
+          new Date(booking.end_time).getTime() < currentTime),
+    )
+    .sort(
+      (firstBooking, secondBooking) =>
+        new Date(secondBooking.end_time).getTime() -
+        new Date(firstBooking.end_time).getTime(),
+    );
+
   return (
     <AppShell active="mine">
       <section className="flex flex-col gap-6">
@@ -356,65 +393,141 @@ export default function MyBookingsPage() {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-4">
-          {bookings.map((booking) => (
-            <article
-              className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
-              key={booking.id}
-            >
-              <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold text-slate-950">
-                  Ressurs: {booking.resources?.name ?? "Booking"}
-                </h2>
-                {booking.booking_types ? (
-                  <p className="text-sm font-bold text-blue-700">
-                    Bookingtype: {booking.booking_types.name}
-                  </p>
-                ) : null}
-                <p className="text-base font-medium text-slate-600">
-                  Dato: {formatDate(booking.start_time)}
+        {!isLoading && bookings.length > 0 ? (
+          <>
+            <section className="flex flex-col gap-3">
+              <h2 className="text-xl font-bold text-slate-950">
+                Aktive bookinger
+              </h2>
+              {activeBookings.length > 0 ? (
+                activeBookings.map((booking) => (
+                  <BookingCard
+                    booking={booking}
+                    cancellingId={cancellingId}
+                    key={booking.id}
+                    onCancel={cancelBooking}
+                  />
+                ))
+              ) : (
+                <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                  Ingen aktive bookinger.
                 </p>
-                <p className="text-base font-medium text-slate-600">
-                  Tid: {formatTime(booking.start_time)}-
-                  {formatTime(booking.end_time)}
-                </p>
-                <p className="mt-2 inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
-                  Status: {getBookingStatusLabel(booking.status)}
-                </p>
-                {statusHelpTexts[booking.status] ? (
-                  <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
-                    {statusHelpTexts[booking.status]}
-                  </p>
-                ) : null}
-                {booking.purpose ? (
-                  <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
-                    Formål: {booking.purpose}
-                  </p>
-                ) : null}
-                {booking.admin_comment ? (
-                  <p className="mt-2 rounded-2xl bg-blue-50 p-3 text-sm font-medium text-blue-900 ring-1 ring-blue-100">
-                    <span className="font-bold">Melding fra styret:</span>{" "}
-                    {booking.admin_comment}
-                  </p>
-                ) : null}
-              </div>
+              )}
+            </section>
 
-              {canCancelBooking(booking.status) ? (
-                <button
-                  className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
-                  disabled={cancellingId === booking.id}
-                  onClick={() => cancelBooking(booking)}
-                  type="button"
-                >
-                  {cancellingId === booking.id
-                    ? "Kansellerer..."
-                    : getCancelButtonLabel(booking.status)}
-                </button>
+            <section className="flex flex-col gap-3">
+              <h2 className="text-xl font-bold text-slate-950">
+                Forespørsler
+              </h2>
+              {requestBookings.length > 0 ? (
+                requestBookings.map((booking) => (
+                  <BookingCard
+                    booking={booking}
+                    cancellingId={cancellingId}
+                    key={booking.id}
+                    onCancel={cancelBooking}
+                  />
+                ))
+              ) : (
+                <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                  Ingen forespørsler.
+                </p>
+              )}
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <button
+                className="flex h-14 items-center justify-between rounded-3xl bg-white px-5 text-left text-xl font-bold text-slate-950 shadow-sm ring-1 ring-slate-200"
+                onClick={() => setIsHistoryOpen((current) => !current)}
+                type="button"
+              >
+                Historikk ({historyBookings.length})
+                <span className="text-2xl leading-none">
+                  {isHistoryOpen ? "−" : "+"}
+                </span>
+              </button>
+
+              {isHistoryOpen ? (
+                historyBookings.length > 0 ? (
+                  historyBookings.map((booking) => (
+                    <BookingCard
+                      allowCancel={false}
+                      booking={booking}
+                      cancellingId={cancellingId}
+                      key={booking.id}
+                      onCancel={cancelBooking}
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-3xl bg-white p-5 text-base font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+                    Ingen historikk ennå.
+                  </p>
+                )
               ) : null}
-            </article>
-          ))}
-        </div>
+            </section>
+          </>
+        ) : null}
       </section>
     </AppShell>
+  );
+}
+
+function BookingCard({
+  allowCancel = true,
+  booking,
+  cancellingId,
+  onCancel,
+}: {
+  allowCancel?: boolean;
+  booking: MyBooking;
+  cancellingId: string | null;
+  onCancel: (booking: MyBooking) => void;
+}) {
+  return (
+    <article className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xl font-bold text-slate-950">
+          Ressurs: {booking.resources?.name ?? "Booking"}
+        </h3>
+        {booking.booking_types ? (
+          <p className="text-sm font-bold text-blue-700">
+            Bookingtype: {booking.booking_types.name}
+          </p>
+        ) : null}
+        <p className="text-base font-medium text-slate-600">
+          Dato: {formatDate(booking.start_time)}
+        </p>
+        <p className="text-base font-medium text-slate-600">
+          Tid: {formatTime(booking.start_time)}-{formatTime(booking.end_time)}
+        </p>
+        <p className="mt-2 inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
+          Status: {getBookingStatusLabel(booking.status)}
+        </p>
+        {booking.purpose ? (
+          <p className="mt-2 rounded-2xl bg-slate-50 p-3 text-sm font-medium text-slate-700">
+            Formål: {booking.purpose}
+          </p>
+        ) : null}
+        {booking.admin_comment ? (
+          <div className="mt-2 rounded-2xl bg-blue-50 p-3 text-sm font-medium text-blue-900 ring-1 ring-blue-100">
+            <p className="font-bold">Melding fra styret</p>
+            <p className="mt-1">{booking.admin_comment}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {allowCancel && canCancelBooking(booking.status) ? (
+        <button
+          className="h-12 rounded-2xl bg-white px-5 text-base font-bold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60"
+          disabled={cancellingId === booking.id}
+          onClick={() => onCancel(booking)}
+          type="button"
+        >
+          {cancellingId === booking.id
+            ? "Kansellerer..."
+            : getCancelButtonLabel(booking.status)}
+        </button>
+      ) : null}
+    </article>
   );
 }
